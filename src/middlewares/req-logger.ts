@@ -1,25 +1,40 @@
 import morgan from "morgan";
 import chalk from "chalk";
-import fs from "fs";
+import fs, { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { Response } from "express";
 import { IncomingMessage, ServerResponse } from "http";
 
 const env = process.env.NODE_ENV || "development";
 const logFileName = `${env.trim()}.request.log`;
+const logFilePath = path.resolve(
+  process.cwd(),
+  env === "development" ? "src" : "dist/src",
+  "logging",
+  "logs",
+  "requests",
+  logFileName
+);
+
+if (!existsSync(logFilePath)) {
+  // First ensure the directory structure exists
+  const logDir = path.dirname(logFilePath);
+
+  if (!existsSync(logDir)) {
+    // Create the directory structure recursively
+    mkdirSync(logDir, { recursive: true });
+  }
+
+  // Create the empty log file
+  writeFileSync(logFilePath, "", "utf8");
+
+  console.log(`Log file created at: ${logFilePath}`);
+}
 
 // Log stream for file logging
-const networkRequestLogStream = fs.createWriteStream(
-  path.resolve(
-    process.cwd(),
-    "src",
-    "logging",
-    "logs",
-    "requests",
-    logFileName
-  ),
-  { flags: "a" }
-);
+const networkRequestLogStream = fs.createWriteStream(logFilePath, {
+  flags: "a",
+});
 
 // Utility function to determine method color
 const getMethodColor = (method: string) => {
