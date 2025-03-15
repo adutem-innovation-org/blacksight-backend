@@ -1,9 +1,9 @@
 import { AppointmentStatus } from "@/enums";
 import { Types, Document, Schema, model } from "mongoose";
-
+const collectionName = "appointments";
 // Interface for Appointment Document
 export interface IAppointment extends Document<Types.ObjectId> {
-  userId: Types.ObjectId;
+  businessId: Types.ObjectId;
   conversationId: Types.ObjectId;
   appointmentDate: Date;
   appointmentTime: Date;
@@ -15,7 +15,7 @@ export interface IAppointment extends Document<Types.ObjectId> {
 // Define the Appointment Schema
 const AppointmentSchema = new Schema<IAppointment>(
   {
-    userId: { type: Schema.Types.ObjectId, required: true, ref: "Users" },
+    businessId: { type: Schema.Types.ObjectId, required: true, ref: "Users" },
     conversationId: {
       type: Schema.Types.ObjectId,
       required: true,
@@ -55,12 +55,12 @@ AppointmentSchema.virtual("dateTime").get(function () {
 });
 
 // Indexing for faster queries
-AppointmentSchema.index({ userId: 1 });
+AppointmentSchema.index({ businessId: 1 });
 AppointmentSchema.index({ conversationId: 1 });
 AppointmentSchema.index({ appointmentDate: 1 });
 
 // Create the Appointment Model
-export const AppointmentModel = model<IAppointment>(
-  "Appointments",
+export const Appointment = model<IAppointment>(
+  collectionName,
   AppointmentSchema
 );

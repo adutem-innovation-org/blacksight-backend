@@ -44,7 +44,7 @@ export const logger = createLogger({
     new transports.File({
       filename: path.resolve(
         process.cwd(),
-        env === "development" ? "src" : "dist/src",
+        env.trim() === "development" ? "src" : "dist/src",
         "logging",
         "logs",
         "errors",
@@ -56,7 +56,7 @@ export const logger = createLogger({
     new transports.File({
       filename: path.resolve(
         process.cwd(),
-        env === "development" ? "src" : "dist/src",
+        env.trim() === "development" ? "src" : "dist/src",
         "logging",
         "logs",
         "global",

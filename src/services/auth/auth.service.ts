@@ -140,7 +140,7 @@ export class AuthService {
     user: IUser,
     userType: UserTypes,
     expire: number | null
-  ): Promise<object> {
+  ): Promise<{ user: AuthData; token: string }> {
     const authId = `auth-id-${v4()}`;
     await this.expireSession(user.id);
     const ex = expire || config.jwt.ttl;
@@ -178,10 +178,11 @@ export class AuthService {
    * @returns {Promise<object>}
    */
   async loginAdmin(loginDto: LoginDto): Promise<object> {
+    console.log(loginDto);
     const user = await this.adminModel.findOne({
       email: loginDto.email.toLowerCase(),
     });
-
+    console.log(user);
     // If user could not be found in email
     if (!user) return throwUnauthorizedError("Invalid email or password");
 
@@ -280,9 +281,41 @@ export class AuthService {
       return throwUnauthorizedError("Invalid email or password");
 
     user.lastLogin = new Date();
+
     await user.save();
 
-    return await this.setSession(user, UserTypes.USER, null); //1 hr
+    const session = await this.setSession(user, UserTypes.USER, null);
+
+    if (!user.isEmailVerified) {
+      this.sendVerificationOTP(session.user);
+    }
+
+    return session;
+  }
+
+  async register(body: CreateAccountDto) {
+    let user = await this.userModel
+      .findOne({ email: body.email.toLowerCase() })
+      .exec();
+
+    if (user) {
+      return throwConflictError("Account with email exists");
+    }
+
+    user = await this.userModel.create(body);
+
+    await user.setPassword(body.password);
+    user.userType = UserTypes.USER;
+
+    user.lastLogin = new Date();
+
+    await user.save();
+
+    const session = await this.setSession(user, UserTypes.USER, null);
+
+    this.sendVerificationOTP(session.user);
+
+    return session;
   }
 
   async verifyEmail(body: VerifyEmailDto, auth: AuthData) {
@@ -508,7 +541,7 @@ export class AuthService {
 
     await this.expireSession(auth.userId);
 
-    return { user };
+    return { user, message: "Your account has been deleted." };
   }
 
   async getUsers(query: any) {
@@ -622,7 +655,7 @@ export class AuthService {
   }
 
   async googleLogin(loginDto: GoogleLoginDto) {
-    return this.socialLogin(loginDto, SocialOptionEnum.GOOGLE);
+    return await this.socialLogin(loginDto, SocialOptionEnum.GOOGLE);
   }
 
   async savePushToken(auth: AuthData, dto: SavePushTokenDto) {
@@ -634,27 +667,6 @@ export class AuthService {
     if (!user) return throwForbiddenError("Forbidden");
 
     return { message: "Token saved successfully" };
-  }
-
-  async register(body: CreateAccountDto) {
-    let user = await this.userModel
-      .findOne({ email: body.email.toLowerCase() })
-      .exec();
-
-    if (user) {
-      return throwConflictError("Account with email exists");
-    }
-
-    user = await this.userModel.create(body);
-
-    await user.setPassword(body.password);
-    user.userType = UserTypes.USER;
-
-    user.lastLogin = new Date();
-
-    await user.save();
-
-    return await this.setSession(user, UserTypes.USER, null);
   }
 
   async sendNotification(body: NotificationDto) {
