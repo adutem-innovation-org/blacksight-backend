@@ -5,3 +5,4 @@ export * from "./appointment";
 export * from "./cache";
 export * from "./conversation";
 export * from "./bot";
+export * from "./reminder";
