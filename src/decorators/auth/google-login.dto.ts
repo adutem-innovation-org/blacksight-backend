@@ -13,9 +13,11 @@ export class GoogleLoginDto {
   @IsEmail({}, { message: "A valid email is required" })
   email!: string;
 
+  @IsDefined({ message: "Please provide first name" })
   @IsString()
   firstName!: string;
 
+  @IsDefined({ message: "Please provide last name" })
   @IsString()
   lastName!: string;
 

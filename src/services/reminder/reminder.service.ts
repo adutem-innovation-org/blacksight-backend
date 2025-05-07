@@ -6,6 +6,7 @@ import {
   throwNotFoundError,
   throwUnprocessableEntityError,
   throwUnsupportedMediaTypeError,
+  toBoolean,
 } from "@/helpers";
 import { AuthData, MiddleWare } from "@/interfaces";
 import { IReminder, Reminder } from "@/models";
@@ -27,11 +28,17 @@ export class ReminderService {
     parseReminderFile: async (req, res, next) => {
       const file = req.file;
 
-      const { isBulk, emails, phones } = req.body;
+      const { emails, phones } = req.body;
+
+      // Convert bullish string "true" or "false" to Boolean
+      const isBulk = toBoolean(req.body.isBulk);
+      req.body.isBulk = isBulk;
 
       if (isBulk) {
         if (emails || phones) return next();
-      } else return next();
+      } else {
+        return next();
+      }
 
       if (!file) return throwBadRequestError("No file uploaded.");
 
@@ -98,6 +105,15 @@ export class ReminderService {
           `Records: \n${JSON.stringify(records, null, 2)}`
         );
 
+        if (records.length === 0)
+          return throwUnprocessableEntityError(
+            `${
+              req.body.channel === ReminderChannels.EMAIL
+                ? "Email"
+                : "Phone number"
+            }s not found in uploaded file `
+          );
+
         // Assign the record to the right field based on the channel
         switch (req.body.channel) {
           case ReminderChannels.EMAIL:
@@ -136,8 +152,6 @@ export class ReminderService {
       acc[key.toLowerCase()] = record[key];
       return acc;
     }, {} as Record<string, string>);
-
-    let formattedRecord: Record<string, any> = {};
 
     // Check for required fields in a case-insensitive manner
 

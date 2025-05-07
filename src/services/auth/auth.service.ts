@@ -613,8 +613,8 @@ export class AuthService {
     if (!user) {
       user = await this.userModel.create({
         email,
-        // firstName,
-        // lastName,
+        firstName,
+        lastName,
         isEmailVerified: true,
         imageUrl: photoUrl,
       });
