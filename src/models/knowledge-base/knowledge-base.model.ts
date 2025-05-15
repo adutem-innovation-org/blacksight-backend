@@ -1,13 +1,26 @@
 import { Document, Types, Model, model, Schema } from "mongoose";
 const collectionName = "knowledge-bases";
 
+type Chunk = {
+  chunkId: number;
+  text: string;
+};
+
+const ChunkSchema: Schema<Chunk> = new Schema<Chunk>({
+  chunkId: {
+    type: Number,
+    required: [true, "Please provide chunk id"],
+  },
+  text: {
+    type: String,
+  },
+});
 export interface IKnowledgeBase extends Document<Types.ObjectId> {
   tag: string;
   businessId: Types.ObjectId;
   documentId: Types.ObjectId;
-  chunkId: number;
-  text: string;
-  metadata: Types.Map<any>;
+  chunks: Array<Chunk>;
+  isActive: boolean;
 }
 
 const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
@@ -25,17 +38,13 @@ const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
       type: Schema.Types.ObjectId,
       required: [true, "Document id is required"],
     },
-    chunkId: {
-      type: Number,
-      required: [true, "Chunk id is required"],
+    chunks: {
+      type: [ChunkSchema],
+      default: undefined,
     },
-    text: {
-      type: String,
-      required: [true, "Chunk text is required"],
-    },
-    metadata: {
-      type: Map,
-      of: Schema.Types.Mixed,
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

@@ -76,7 +76,11 @@ export const uploadFiles = (
         if (isRequired && (!reqFiles || !reqFiles[field.name])) {
           return res
             .status(StatusCodes.BAD_REQUEST)
-            .json({ error: `Missing required file: ${field.name}` });
+            .json({
+              message: `Missing required file: ${field.name}`,
+              status: StatusCodes.BAD_REQUEST,
+              success: false,
+            });
         }
       }
 
@@ -105,7 +109,7 @@ export const uploadSingleFile = (options: {
         const statusCode = err.message.includes("Invalid file type")
           ? StatusCodes.UNSUPPORTED_MEDIA_TYPE
           : StatusCodes.BAD_REQUEST;
-        return res.status(statusCode).json({ message: err.message }).json({
+        return res.status(statusCode).json({
           message: err.message,
           success: false,
           status: statusCode,
@@ -113,7 +117,11 @@ export const uploadSingleFile = (options: {
       }
 
       if (!req.file && options.required)
-        return throwBadRequestError(`Missing required file`);
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          messate: `Missing required file: ${options.name}`,
+          success: false,
+          status: StatusCodes.BAD_REQUEST,
+        });
       next();
     });
   };

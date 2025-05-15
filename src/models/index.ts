@@ -4,3 +4,5 @@ export * from "./conversation";
 export * from "./knowledge-base";
 export * from "./bots";
 export * from "./reminder";
+export * from "./activity";
+export * from "./meeting-provider";

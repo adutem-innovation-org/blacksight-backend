@@ -25,6 +25,7 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   let errorObject: ErrorObject = {};
+  console.log(err);
 
   if (err instanceof CustomError && isCustomError(err)) {
     errorObject.status = err?.statusCode;

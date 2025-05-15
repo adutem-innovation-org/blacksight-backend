@@ -1,5 +1,5 @@
 import { ReminderController } from "@/controllers";
-import { CreateReminderDto } from "@/decorators/reminder";
+import { CreateReminderDto } from "@/decorators";
 import { UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {

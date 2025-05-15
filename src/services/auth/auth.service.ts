@@ -35,6 +35,8 @@ import {
 } from "@/helpers";
 import { webcrypto } from "crypto";
 import EventEmitter2 from "eventemitter2";
+import { ActivityService } from "../activity";
+import { ActivityEvents } from "@/events";
 
 export class AuthService {
   private static instance: AuthService;
@@ -290,6 +292,11 @@ export class AuthService {
       this.sendVerificationOTP(session.user);
     }
 
+    this.eventEmitter.emit(ActivityEvents.USER_LOGIN, {
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+
     return session;
   }
 
@@ -314,6 +321,11 @@ export class AuthService {
     const session = await this.setSession(user, UserTypes.USER, null);
 
     this.sendVerificationOTP(session.user);
+
+    this.eventEmitter.emit(ActivityEvents.USER_REGISTERED, {
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
 
     return session;
   }

@@ -46,5 +46,12 @@ export const config = {
     apiKey: process.env.MAIL_API_KEY,
     domain: process.env.MAIL_DOMAIN,
   },
+  pinecone: {
+    apiKey: process.env.PINECONE_API_KEY ?? "",
+    env: process.env.PINECONE_ENV,
+  },
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY ?? "",
+  },
   isProduction: process.env.ENVIRONMENT === "production",
 };

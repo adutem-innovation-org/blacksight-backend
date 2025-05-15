@@ -21,6 +21,8 @@ export interface IUser extends Document<Types.ObjectId> {
   imageUrl: string;
   isSuperAdmin: boolean;
   userType: UserTypes.ADMIN | UserTypes.USER | UserTypes.MERCHANT;
+  hasConnectedGoogleMeet: boolean;
+  hasConnectedZoomMeet: boolean;
   setPassword(password: string): Promise<void>;
   validatePassword(password: string): Promise<boolean>;
 }
@@ -92,6 +94,14 @@ export const UserSchema: Schema<IUser> = new Schema(
         values: Object.values(UserTypes),
         message: "Unsupported user type {{VALUE}}",
       },
+    },
+    hasConnectedGoogleMeet: {
+      type: Boolean,
+      default: false,
+    },
+    hasConnectedZoomMeet: {
+      type: Boolean,
+      default: false,
     },
   },
   {

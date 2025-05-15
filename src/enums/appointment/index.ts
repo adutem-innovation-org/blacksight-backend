@@ -5,7 +5,7 @@ export enum AppointmentStatus {
   COMPLETED = "completed",
 }
 
-export enum BookingProviders {
-  CALENDLY = "calendly",
+export enum MeetingProviders {
   ZOOM = "zoom",
+  MEET = "meet",
 }

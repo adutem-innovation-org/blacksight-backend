@@ -1,4 +1,4 @@
-import { CreateReminderDto } from "@/decorators/reminder";
+import { CreateReminderDto } from "@/decorators";
 import { ReminderChannels, ReminderTypes, UserTypes } from "@/enums";
 import {
   throwBadRequestError,
