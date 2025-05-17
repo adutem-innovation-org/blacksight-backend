@@ -15,11 +15,11 @@ export interface IAppointment extends Document<Types.ObjectId> {
 // Define the Appointment Schema
 const AppointmentSchema = new Schema<IAppointment>(
   {
-    businessId: { type: Schema.Types.ObjectId, required: true, ref: "Users" },
+    businessId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
     conversationId: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: "Conversations",
+      ref: "conversations",
     },
     appointmentDate: { type: Date, required: true },
     appointmentTime: { type: Date, required: true },
