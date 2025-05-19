@@ -1,12 +1,12 @@
-import { MeetingProviders } from "@/enums";
+import { MeetingProvidersEnum } from "@/enums";
 import { Document, model, Model, Schema, Types } from "mongoose";
 
 export interface IMeetingProvider extends Document<Types.ObjectId> {
   userId: Types.ObjectId;
-  provider: MeetingProviders;
-  access_token: string;
-  refresh_token: string;
-  expiry_date: Date;
+  provider: MeetingProvidersEnum;
+  accessToken: string;
+  refreshToken: string;
+  expiryDate: Date;
 }
 
 const MeetingProviderSchema: Schema<IMeetingProvider> =
@@ -20,19 +20,20 @@ const MeetingProviderSchema: Schema<IMeetingProvider> =
       provider: {
         type: String,
         enum: {
-          values: Object.values(MeetingProviders),
+          values: Object.values(MeetingProvidersEnum),
           message: "Unsupported provider",
         },
+        required: [true, "Please provide meeting provider"],
       },
-      access_token: {
+      accessToken: {
         type: String,
         required: [true, "Please provide provider access token"],
       },
-      refresh_token: {
+      refreshToken: {
         type: String,
         required: [true, "Please provide provider refresh token"],
       },
-      expiry_date: {
+      expiryDate: {
         type: Date,
         required: [true, "Please provide token expiration date"],
       },

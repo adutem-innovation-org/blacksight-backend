@@ -49,5 +49,6 @@ knowledgeBaseRouter.get("/:id", knowledgeBaseController.getKnowledgeBaseById);
 
 knowledgeBaseRouter.delete(
   "/delete/:id",
+  permissionRequirement([UserTypes.USER]),
   knowledgeBaseController.deleteKnowledgeBase
 );

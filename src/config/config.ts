@@ -23,7 +23,11 @@ if (result.error) {
 export const config = {
   port: Number.parseInt(process.env.PORT!) || 3000,
   env: process.env.ENV,
-  google: process.env.GOOGLE_CLIENT_ID,
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUrl: process.env.GOOGLE_CALENDAR_CONSENT_REDIRECT_URL,
+  },
   hostname: process.env.HOST,
   baseUrl: process.env.BASE_URL || `http://127.0.0.1:${process.env.PORT}`,
   corsOrigins: (process.env.CORS_ORIGINS || "").split(","),

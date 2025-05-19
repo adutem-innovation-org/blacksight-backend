@@ -48,7 +48,12 @@ reminderRouter.get(
   reminderController.getReminders
 );
 
-reminderRouter.get("/:id", validateToken, reminderController.getReminderById);
+reminderRouter.get(
+  "/:id",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  reminderController.getReminderById
+);
 
 reminderRouter.delete(
   "/:id",

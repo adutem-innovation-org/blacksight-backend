@@ -1,10 +1,12 @@
 import { AppointmentStatus } from "@/enums";
+import { emailRegex } from "@/utils";
 import { Types, Document, Schema, model } from "mongoose";
 const collectionName = "appointments";
 // Interface for Appointment Document
 export interface IAppointment extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   conversationId: Types.ObjectId;
+  customerEmail: string;
   appointmentDate: Date;
   appointmentTime: Date;
   meetingLink: string;
@@ -21,9 +23,16 @@ const AppointmentSchema = new Schema<IAppointment>(
       required: true,
       ref: "conversations",
     },
-    appointmentDate: { type: Date, required: true },
-    appointmentTime: { type: Date, required: true },
-    meetingLink: { type: String, required: true },
+    customerEmail: {
+      type: String,
+      match: [emailRegex, "Please provide a valid email"],
+    },
+    appointmentDate: { type: Date },
+    appointmentTime: { type: Date },
+    meetingLink: {
+      type: String,
+      // Optional: set only if the bot is configured for automatic meeting creation
+    },
     status: {
       type: String,
       enum: Object.values(AppointmentStatus),

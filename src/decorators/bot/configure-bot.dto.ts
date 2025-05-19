@@ -20,11 +20,13 @@ export class ConfigureBotDto {
   })
   knowledgeBaseId!: Types.ObjectId;
 
-  @IsDefined({ message: "Please provide bot name" })
-  @IsString({ message: "Bot name must be of type string" })
   @IsOptional()
   @IsString({ message: "Instructions must be of type string" })
   instructions?: string;
+
+  @IsOptional()
+  @IsString({ message: "Welcome message must be string" })
+  welcomeMessage?: string;
 
   @IsDefined({ message: "Please specify is meeting should be scheduled" })
   @Type(() => Boolean)
@@ -40,4 +42,41 @@ export class ConfigureBotDto {
     message: "Meeting provider identifier must be a valid database identifier",
   })
   meetingProviderId?: Types.ObjectId;
+}
+
+export class UpdateBotConfigurationDto {
+  @IsOptional()
+  @IsString({ message: "Bot name must be string" })
+  name?: string;
+
+  @IsOptional()
+  @IsMongoId({
+    message: "Knowledge base identifier must be a valid database identifier",
+  })
+  knowledgeBaseId?: Types.ObjectId;
+
+  @IsOptional()
+  @IsString({ message: "Instructions must be of type string" })
+  instructions?: string;
+
+  @IsOptional()
+  @IsString({ message: "Welcome message must be string" })
+  welcomeMessage?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean({ message: "Schedule meeting must be boolean" })
+  scheduleMeeting?: boolean;
+
+  @ValidateIf((o) => o.scheduleMeeting !== undefined)
+  @IsMongoId({
+    message: "Meeting provider identifier must be a valid database identifier",
+  })
+  meetingProviderId?: Types.ObjectId;
+}
+
+export class UpdateBotInstructionsDto {
+  @IsOptional()
+  @IsString({ message: "Instructions must be of type string" })
+  instructions?: string;
 }

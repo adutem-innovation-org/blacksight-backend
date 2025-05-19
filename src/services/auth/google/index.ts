@@ -11,7 +11,7 @@ export class GoogleAuth {
   async fetchTokenInfo(idToken: string): Promise<TokenPayload | undefined> {
     const ticket = await this.client.verifyIdToken({
       idToken: idToken,
-      audience: config.google,
+      audience: config.google.clientId,
     });
     return ticket.getPayload();
   }

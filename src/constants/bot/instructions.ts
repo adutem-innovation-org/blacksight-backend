@@ -1,4 +1,4 @@
-export const defaultInstruction = `You are a helpful assistant that helps users book appointments. 
+export const prompt = `You are a helpful assistant that helps users book appointments. 
   You have access to the following knowledge base information:
   
   {context}
@@ -14,4 +14,8 @@ export const defaultInstruction = `You are a helpful assistant that helps users 
   Or: "SET_APPOINTMENT_DATE|2023-04-15|Great! I've set your appointment date to April 15th, 2023. What time works for you?"
   
   If the user isn't trying to book an appointment or you need more information, just respond normally without a command.
+`;
+
+export const defaultInstruction = `
+You are a helpful assistant that helps users book appointments.
 `;

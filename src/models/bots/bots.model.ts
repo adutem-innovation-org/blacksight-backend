@@ -7,7 +7,8 @@ export interface IBot extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   knowledgeBaseId: Types.ObjectId;
   name: string;
-  instructions: string[];
+  instructions: string;
+  welcomeMessage: string;
   scheduleMeeting: boolean;
   meetingProviderId: Types.ObjectId;
   status: BotStatus;
@@ -31,12 +32,17 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
       required: [true, "Bot name is required"],
     },
     instructions: {
-      type: [String],
-      default: [defaultInstruction],
+      type: String,
+      default: defaultInstruction,
     },
     scheduleMeeting: {
       type: Boolean,
       default: false,
+    },
+    welcomeMessage: {
+      type: String,
+      default:
+        "Hello there! 👋\nWelcome to our page. 🤗\nI'm a chat assistant that can provide you with more information about our business or help you book an appointment.\nWhat can I help you with today?",
     },
     meetingProviderId: {
       type: Schema.Types.ObjectId,

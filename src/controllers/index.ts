@@ -3,3 +3,5 @@ export * from "./analytics.controller";
 export * from "./reminder.controller";
 export * from "./knowledge-base.controller";
 export * from "./bot.controller";
+export * from "./meeting-provider.controller";
+export * from "./appointment.controller";

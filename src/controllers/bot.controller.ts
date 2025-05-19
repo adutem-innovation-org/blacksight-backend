@@ -1,8 +1,13 @@
-import { ConfigureBotDto } from "@/decorators";
+import {
+  ConfigureBotDto,
+  UpdateBotConfigurationDto,
+  UpdateBotInstructionsDto,
+} from "@/decorators";
 import { sendSuccessResponse } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { BotService } from "@/services/bot";
 import { Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
 
 export class BotController {
   private static instance: BotController;
@@ -18,6 +23,11 @@ export class BotController {
     }
     return this.instance;
   }
+
+  updateAllBots = async (req: Request, res: Response) => {
+    const data = await this.botService.updateAllBots(req.body);
+    return sendSuccessResponse(res, data);
+  };
 
   botAnalytics = async (req: Request, res: Response) => {
     const data = await this.botService.analytics(req.authData!);
@@ -36,6 +46,30 @@ export class BotController {
 
   configureBot = async (req: GenericReq<ConfigureBotDto>, res: Response) => {
     const data = await this.botService.configureBot(req.authData!, req.body);
+    return sendSuccessResponse(res, data, StatusCodes.CREATED);
+  };
+
+  updateBotConfiguration = async (
+    req: GenericReq<UpdateBotConfigurationDto>,
+    res: Response
+  ) => {
+    const data = await this.botService.updateBotConfigurations(
+      req.authData!,
+      req.params.id,
+      req.body
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  updateBotInstructions = async (
+    req: GenericReq<UpdateBotInstructionsDto>,
+    res: Response
+  ) => {
+    const data = await this.botService.updateBotInstructions(
+      req.authData!,
+      req.params.id,
+      req.body
+    );
     return sendSuccessResponse(res, data);
   };
 
