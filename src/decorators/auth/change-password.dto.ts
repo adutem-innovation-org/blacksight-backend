@@ -18,3 +18,12 @@ export class ChangePasswordDto {
   })
   readonly oldPassword!: string;
 }
+export class SetupPasswordDto {
+  @IsDefined({ message: "Please provide password" })
+  @MinLength(8, { message: "Minimum of 8 character required" })
+  @Matches(passwordRegex, {
+    message:
+      "Password must contain at least one uppercase letter, one lowercase letter, a number and special character",
+  })
+  readonly password!: string;
+}

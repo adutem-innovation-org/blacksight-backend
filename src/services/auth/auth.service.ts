@@ -24,6 +24,7 @@ import {
   CreateAccountDto,
   NotificationDto,
   GetUserPasswordDto,
+  SetupPasswordDto,
 } from "@/decorators";
 import {
   throwBadRequestError,
@@ -33,7 +34,7 @@ import {
   throwUnauthorizedError,
   throwUnprocessableEntityError,
 } from "@/helpers";
-import { webcrypto } from "crypto";
+import { randomUUID, webcrypto } from "crypto";
 import EventEmitter2 from "eventemitter2";
 import { ActivityService } from "../activity";
 import { ActivityEvents } from "@/events";
@@ -180,7 +181,6 @@ export class AuthService {
    * @returns {Promise<object>}
    */
   async loginAdmin(loginDto: LoginDto): Promise<object> {
-    console.log(loginDto);
     const user = await this.adminModel.findOne({
       email: loginDto.email.toLowerCase(),
     });
@@ -283,6 +283,10 @@ export class AuthService {
       return throwUnauthorizedError("Invalid email or password");
 
     user.lastLogin = new Date();
+
+    if (!user?.businessId) {
+      user.businessId = randomUUID();
+    }
 
     await user.save();
 
@@ -437,6 +441,44 @@ export class AuthService {
     return { message: "Password changed successfully" };
   }
 
+  async setupPassword(auth: AuthData, body: SetupPasswordDto) {
+    let user;
+
+    switch (auth.userType) {
+      case UserTypes.ADMIN:
+        user = await this.adminModel
+          .findById(auth.userId)
+          .select(GetUserPasswordDto)
+          .exec();
+        break;
+      case UserTypes.MERCHANT:
+        user = await this.merchantModel
+          .findById(auth.userId)
+          .select(GetUserPasswordDto)
+          .exec();
+        break;
+      default:
+        user = await this.userModel
+          .findById(auth.userId)
+          .select(GetUserPasswordDto)
+          .exec();
+    }
+
+    if (!user)
+      return throwUnprocessableEntityError(`Invalid account, please try again`);
+
+    if (user.passwordChangedAt) {
+      return throwUnprocessableEntityError(
+        "Only user without an existing password can setup a new one."
+      );
+    }
+
+    await user.setPassword(body.password);
+    await user.save();
+
+    return { message: "Password setup successfully" };
+  }
+
   async resetPassword(
     body: ResetPasswordDto,
     type: UserTypes = UserTypes.ADMIN
@@ -533,6 +575,11 @@ export class AuthService {
 
     if (!user) {
       throwUnauthorizedError("Invalid account, Please try again");
+    }
+
+    if (user?.userType === UserTypes.USER && !user?.businessId) {
+      user.businessId = randomUUID();
+      await user.save();
     }
 
     return { user };

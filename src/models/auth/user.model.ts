@@ -3,9 +3,11 @@ import { emailRegex } from "@/utils";
 import { Schema, Model, model, Document, Types } from "mongoose";
 import { compare, genSalt, hash } from "bcryptjs";
 import { BYTE_LENGTH } from "@/constants";
+import { randomUUID } from "crypto";
 const collectionName = "users";
 
 export interface IUser extends Document<Types.ObjectId> {
+  businessId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -30,6 +32,10 @@ export interface IUser extends Document<Types.ObjectId> {
 
 export const UserSchema: Schema<IUser> = new Schema(
   {
+    businessId: {
+      type: String,
+      default: randomUUID,
+    },
     firstName: {
       type: String,
       trim: true,

@@ -8,6 +8,7 @@ import {
   NotificationDto,
   ResetPasswordDto,
   SavePushTokenDto,
+  SetupPasswordDto,
   VerifyEmailDto,
 } from "@/decorators";
 import { UserTypes } from "@/enums";
@@ -71,6 +72,11 @@ export class AuthController {
   ) => {
     const data = await this.authService.changePassword(req.authData!, req.body);
     return sendSuccessResponse(res, data);
+  };
+
+  setupPassword = async (req: GenericReq<SetupPasswordDto>, res: Response) => {
+    const data = await this.authService.setupPassword(req.authData!, req.body);
+    return sendSuccessResponse(res, data, StatusCodes.CREATED);
   };
 
   adminResetPassword = async (

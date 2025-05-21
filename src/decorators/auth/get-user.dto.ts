@@ -22,4 +22,5 @@ export const GetUserAltDto = {
 export const GetUserPasswordDto = {
   hash: 1,
   salt: 1,
+  passwordChangedAt: 1,
 };

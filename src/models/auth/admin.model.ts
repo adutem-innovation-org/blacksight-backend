@@ -21,6 +21,8 @@ AdminSchema.add({
   },
 });
 
+AdminSchema.remove("businessId");
+
 AdminSchema.clearIndexes();
 
 // AdminSchema.pre<IAdmin>("save", async function (next) {

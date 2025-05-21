@@ -16,6 +16,7 @@ import {
   VerifyEmailDto,
   NotificationDto,
   ChangePasswordDto,
+  SetupPasswordDto,
 } from "@/decorators";
 import { AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -49,6 +50,14 @@ authRouter.patch(
   validateDTO(ChangePasswordDto),
   authController.changePassword
 );
+
+authRouter.post(
+  "/setup-password",
+  validateToken,
+  validateDTO(SetupPasswordDto),
+  authController.setupPassword
+);
+
 authRouter.patch(
   "/admin/reset-password",
   validateDTO(ResetPasswordDto),
