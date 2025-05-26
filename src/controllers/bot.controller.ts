@@ -1,5 +1,7 @@
 import {
+  AskChatbotDto,
   ConfigureBotDto,
+  StartConversationDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
 } from "@/decorators";
@@ -75,6 +77,39 @@ export class BotController {
 
   deleteBot = async (req: Request, res: Response) => {
     const data = await this.botService.deleteBot(req.authData!, req.params.id);
+    return sendSuccessResponse(res, data);
+  };
+
+  askChatbot = async (req: GenericReq<AskChatbotDto>, res: Response) => {
+    const data = await this.botService.askChatbot(req.authData!, req.body);
+    return sendSuccessResponse(res, data);
+  };
+
+  startConversation = async (
+    req: GenericReq<StartConversationDto>,
+    res: Response
+  ) => {
+    const data = await this.botService.startConversation(
+      req.authData!,
+      req.body.botId
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  getTrainingConversation = async (req: Request, res: Response) => {
+    const data = await this.botService.getTrainingConversation(
+      req.authData!,
+      req.params.botId
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  clearTrainingConversation = async (req: Request, res: Response) => {
+    const data = await this.botService.clearTrainingConversation(
+      req.authData!,
+      req.params.botId,
+      req.params.conversationId
+    );
     return sendSuccessResponse(res, data);
   };
 }

@@ -1,11 +1,13 @@
 import { defaultInstruction } from "@/constants";
 import { BotStatus } from "@/enums";
 import { Types, Model, model, Schema, Document } from "mongoose";
+import { IKnowledgeBase } from "../knowledge-base";
 const collectionName = "bots";
 
 export interface IBot extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   knowledgeBaseId: Types.ObjectId;
+  knowledgeBase: IKnowledgeBase;
   name: string;
   instructions: string;
   welcomeMessage: string;
@@ -81,7 +83,7 @@ BotSchema.virtual("knowledgeBase", {
   foreignField: "_id",
   justOne: true,
   options: {
-    select: "tag isActive",
+    select: "tag isActive documentId",
   },
 });
 

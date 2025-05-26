@@ -1,4 +1,6 @@
+import { ConversationMode, Intent, RoleEnum } from "@/enums";
 import {
+  AskChatbotDto,
   ConfigureBotDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
@@ -13,25 +15,43 @@ import {
 import { AuthData } from "@/interfaces";
 import {
   Bot,
+  Conversation,
   IBot,
+  IConversation,
   IKnowledgeBase,
   IMeetingProvider,
   KnowledgeBase,
   MeetingProvider,
 } from "@/models";
-import { PaginationService } from "@/utils";
+import { CacheService, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
+import { KnowledgeBaseService } from "../knowledge-base";
+import { ConversationService } from "./conversation.service";
+import OpenAI from "openai";
+import { config } from "@/config";
+import { intentActionsMapper } from "@/constants";
 
 export class BotService {
   private static instance: BotService;
   private readonly botModel: Model<IBot> = Bot;
+  private readonly openai: OpenAI;
+
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
   private readonly meetingProviderModel: Model<IMeetingProvider> =
     MeetingProvider;
+  private readonly conversationModel: Model<IConversation> = Conversation;
+
   private readonly botPaginationService: PaginationService<IBot>;
+  private readonly knowledgeBaseService: KnowledgeBaseService;
+  private readonly conversationService: ConversationService;
+  private readonly cacheService: CacheService;
 
   constructor() {
     this.botPaginationService = new PaginationService(this.botModel);
+    this.knowledgeBaseService = KnowledgeBaseService.getInstace();
+    this.conversationService = ConversationService.getInstance();
+    this.openai = new OpenAI({ apiKey: config.openai.apiKey });
+    this.cacheService = CacheService.getInstance();
   }
 
   static getInstance() {
@@ -194,5 +214,177 @@ export class BotService {
     });
     if (!bot) return throwNotFoundError("Bot not found");
     return { bot, message: "Bot deleted successfully" };
+  }
+
+  async startConversation(authData: AuthData, botId: string) {
+    let bot: IBot | null = await this.cacheService.get(botId);
+    if (!bot) {
+      bot = await this.botModel.findById(botId);
+    }
+
+    if (!bot)
+      return throwUnprocessableEntityError("Unconfigured bot referenced");
+
+    const conversation = await this.conversationService.startNewConversation(
+      botId,
+      authData.userId
+    );
+
+    const newMessage = {
+      role: RoleEnum.ASSISTANT,
+      content: bot.welcomeMessage,
+    };
+
+    conversation.messages.push(newMessage);
+
+    await conversation.save();
+
+    return { data: newMessage, conversationId: conversation.conversationId };
+  }
+
+  async askChatbot(authData: AuthData, body: AskChatbotDto) {
+    const { userQuery, botId, conversationId } = body;
+
+    const businessId = authData.userId.toString();
+    let bot: IBot | null = await this.cacheService.get(botId);
+    if (!bot) {
+      bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
+    }
+
+    if (!bot)
+      return throwUnprocessableEntityError("Unconfigured bot referenced");
+
+    // ✅ Step 1: Construct the context for the AI to work with
+    // The context for now will be a combination of the conversation summary + other message + userQuery + bot instructions
+    // Get current conversation
+    let conversation = await this.conversationService.getOrCreateConversation(
+      conversationId,
+      botId,
+      businessId
+    );
+
+    // Save new message to it
+    conversation = await this.conversationService.saveUserMessage(
+      conversation,
+      userQuery
+    );
+
+    // Process the conversation (generate summary if needed)
+    let context = await this.conversationService.processConversation(
+      conversation
+    );
+
+    // ✅ Step 2: Detect message intent
+    const intent = await this.conversationService.detectUserIntent({
+      ...context,
+      userQuery,
+    });
+
+    // ✅ Step 3: Handle intents
+    switch (intent.intent) {
+      case Intent.BOOK_APPOINTMENT:
+        console.log("Book appointment initialized >> ", intent);
+        break;
+      case Intent.SET_APPOINTMENT_DATE:
+        console.log("Appointment date set >> ", intent);
+        break;
+      case Intent.SET_APPOINTMENT_EMAIL:
+        console.log("Appointment email set >> ", intent);
+        break;
+      case Intent.SET_APPOINTMENT_TIME:
+        console.log("Appointment time set >> ", intent);
+      default:
+        break;
+    }
+
+    // let knowledgeText = "";
+    // const customInstructions =
+    //   bot.instructions ?? "No custom instruction from the business.";
+    // const documentId = bot.knowledgeBase.documentId.toString();
+
+    // if (intent.intent === Intent.UNKNOWN) {
+    //   if (documentId) {
+    //     // Retrieve the most relevant knowledge base chunks
+    //     try {
+    //       knowledgeText = await this.knowledgeBaseService.queryKnowledgeBase(
+    //         businessId,
+    //         documentId,
+    //         userQuery
+    //       );
+    //     } catch (error) {}
+    //   }
+    // }
+
+    // Structured prompt
+    // const developerPrompt = `
+    // You are a chatbot for a business.
+    // ${customInstructions}
+    // Use the following information to answer user queries:
+    // ${knowledgeText}
+
+    // Past conversation summary:
+    // ${context.summaries.join("\n")}
+
+    // Last action you carried out:
+    // ${intentActionsMapper[intent.intent]}
+    // `;
+
+    // Call OpenAI
+    // const openaiResponse = await this.openai.chat.completions.create({
+    //   model: "gpt-4",
+    //   messages: [
+    //     { role: "developer", content: developerPrompt },
+    //     ...context.unsummarizedMessages,
+    //   ],
+    // });
+
+    // const botResponse = {
+    //   role: RoleEnum.ASSISTANT,
+    //   content:
+    //     openaiResponse.choices[0].message.content ??
+    //     "I'm not sure I understood that. Could you please clarify",
+    // };
+    const botResponse = {
+      role: RoleEnum.ASSISTANT,
+      content: intent.message,
+    };
+
+    conversation.messages.push(botResponse);
+
+    await conversation.save();
+
+    return { data: botResponse };
+  }
+
+  async getTrainingConversation(auth: AuthData, botId: string) {
+    const trainingConversation = await this.conversationModel.findOne({
+      mode: ConversationMode.TRAINING,
+      botId: new Types.ObjectId(botId),
+      businessId: new Types.ObjectId(auth.userId),
+    });
+
+    if (!trainingConversation) {
+      return throwNotFoundError("Conversation not found");
+    }
+
+    return {
+      messages: trainingConversation.messages,
+      conversationId: trainingConversation.conversationId,
+      botId: trainingConversation.botId,
+    };
+  }
+
+  async clearTrainingConversation(
+    auth: AuthData,
+    botId: string,
+    conversationId: string
+  ) {
+    const conversation = await this.conversationModel.findOneAndDelete({
+      botid: new Types.ObjectId(botId),
+      conversationId: new Types.ObjectId(conversationId),
+      mode: ConversationMode.TRAINING,
+      businessId: new Types.ObjectId(auth.userId),
+    });
+    return { message: "Training conversation deleted", conversation };
   }
 }

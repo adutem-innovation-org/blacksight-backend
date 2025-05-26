@@ -1,59 +1,62 @@
-import { MessageEnum } from "@/enums";
+import { ConversationMode, RoleEnum } from "@/enums";
 import { Document, Types, Schema, model, Model } from "mongoose";
 const collectionName = "conversations";
-interface IMessage extends Document<Types.ObjectId> {
-  type: MessageEnum;
-  prompt: string;
-  response: string;
+export interface IMessage {
+  role: RoleEnum;
+  content: string;
 }
 
+interface ISummary {
+  content: string;
+  startIndex: number;
+  endIndex: number;
+}
 export interface IConversation extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
-  customerId: Types.UUID;
+  conversationId: string;
+  botId: Types.ObjectId;
+  mode: ConversationMode;
   messages: IMessage[];
+  summaries: ISummary[];
 }
 
 const MessageSchema: Schema<IMessage> = new Schema<IMessage>(
   {
-    type: {
+    role: {
       type: String,
-      required: [true, "Please specify message type"],
+      required: [true, "Please specify role"],
       enum: {
-        values: Object.values(MessageEnum),
-        message: "Unsupported message type",
+        values: Object.values(RoleEnum),
+        message: "Unsupported message role",
       },
     },
-    prompt: {
+    content: {
       type: String,
-      required: [
-        function () {
-          return this.type === MessageEnum.PROMPT;
-        },
-        "Prompt is required",
-      ],
-      trim: true,
-    },
-    response: {
-      type: String,
-      required: [
-        function () {
-          return this.type === MessageEnum.RESPONSE;
-        },
-        "Response is required",
-      ],
+      required: [true, "Please provide message content"],
       trim: true,
     },
   },
   {
     timestamps: true,
     toJSON: {
-      virtuals: true,
       versionKey: false,
     },
-    toObject: {
-      virtuals: true,
-    },
   }
+);
+
+const SummarySchema: Schema<ISummary> = new Schema<ISummary>(
+  {
+    content: {
+      type: String,
+    },
+    startIndex: {
+      type: Number,
+    },
+    endIndex: {
+      type: Number,
+    },
+  },
+  { timestamps: true, toJSON: { versionKey: false } }
 );
 
 const ConversationSchema: Schema<IConversation> = new Schema<IConversation>(
@@ -63,12 +66,27 @@ const ConversationSchema: Schema<IConversation> = new Schema<IConversation>(
       required: [true, "Please provide owner id"],
       ref: "users",
     },
-    customerId: {
-      type: Schema.Types.UUID,
-      required: [true, "Please provider customer id"],
+    botId: {
+      type: Schema.Types.ObjectId,
+      required: [true, "Please provide bot id"],
+      ref: "bots",
+    },
+    conversationId: {
+      type: String,
+    },
+    mode: {
+      type: String,
+      enum: {
+        values: Object.values(ConversationMode),
+        message: "Unsupported conversation mode {{VALUE}}",
+      },
+      default: ConversationMode.TRAINING,
     },
     messages: {
-      types: [MessageSchema],
+      type: [MessageSchema],
+    },
+    summaries: {
+      type: [SummarySchema],
     },
   },
   {

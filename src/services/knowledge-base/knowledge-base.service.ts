@@ -168,6 +168,35 @@ export class KnowledgeBaseService {
     }
   }
 
+  queryKnowledgeBase = async (
+    businessId: string,
+    documentId: string,
+    userQuery: string
+  ) => {
+    const pineconeIndex = this.pinecone.Index("knowledge-base");
+
+    const embeddingResponse = await this.openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: userQuery,
+    });
+
+    const queryEmbedding = embeddingResponse.data[0].embedding;
+
+    const searchResults = await pineconeIndex.query({
+      vector: queryEmbedding,
+      topK: 3,
+      includeMetadata: true,
+      filter: {
+        businessId,
+        documentId,
+      },
+    });
+
+    return searchResults.matches
+      .map((match) => match?.metadata?.text || "")
+      .join("\n\n");
+  };
+
   async getAllKnowledgeBase(auth: AuthData) {
     let query: Record<string, any> = {};
     if (auth.userType === UserTypes.USER) {

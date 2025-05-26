@@ -1,6 +1,8 @@
 import { BotController } from "@/controllers";
 import {
+  AskChatbotDto,
   ConfigureBotDto,
+  StartConversationDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
 } from "@/decorators";
@@ -53,4 +55,26 @@ botRouter.patch(
   permissionRequirement([UserTypes.USER]),
   validateDTO(UpdateBotInstructionsDto),
   botController.updateBotInstructions
+);
+
+botRouter.post(
+  "/conversation/training/start",
+  validateDTO(StartConversationDto),
+  botController.startConversation
+);
+
+botRouter.post(
+  "/conversation/training/ask-chatbot",
+  validateDTO(AskChatbotDto),
+  botController.askChatbot
+);
+
+botRouter.get(
+  "/conversation/training/:botId",
+  botController.getTrainingConversation
+);
+
+botRouter.delete(
+  "/conversation/training/:botId/:conversationId",
+  botController.clearTrainingConversation
 );
