@@ -1,4 +1,4 @@
-import { ConversationMode, Intent, RoleEnum } from "@/enums";
+import { BotStatus, ConversationMode, Intent, RoleEnum } from "@/enums";
 import {
   AskChatbotDto,
   ConfigureBotDto,
@@ -7,6 +7,8 @@ import {
 } from "@/decorators";
 import {
   isOwner,
+  isOwnerUser,
+  isSuperAdmin,
   isUser,
   throwForbiddenError,
   throwNotFoundError,
@@ -199,6 +201,29 @@ export class BotService {
     }
 
     return true;
+  }
+
+  /**
+   * The service method is used to deactivate a bot
+   * @param authData The current authenticated entity
+   * @param id The mongodb identifier of the bot to be deactivated
+   * @returns Promise<{bot: IBot, message: string}>
+   */
+  async deactivateBot(authData: AuthData, id: string) {
+    const bot = await this.botModel.findById(id);
+    if (!bot) return throwNotFoundError("Bot not found");
+    if (!isOwnerUser(authData, bot.businessId) && !isSuperAdmin(authData)) {
+      return throwForbiddenError(
+        "You are not allowed to access this resource."
+      );
+    }
+
+    bot.status = BotStatus.INACTIVE;
+    bot.isActive = false;
+
+    await bot.save();
+
+    return { bot, message: "Bot deactivated" };
   }
 
   /**

@@ -43,12 +43,19 @@ botRouter.post(
 botRouter
   .route("/:id")
   .get(botController.getBotById)
-  .delete(permissionRequirement([UserTypes.USER]), botController.deleteBot)
   .patch(
     permissionRequirement([UserTypes.USER]),
     validateDTO(UpdateBotConfigurationDto),
     botController.updateBotConfiguration
   );
+
+botRouter.delete(
+  "/delete/:id",
+  permissionRequirement([UserTypes.USER]),
+  botController.deleteBot
+);
+
+botRouter.patch("/deactivate/:id", botController.deactivateBot);
 
 botRouter.patch(
   "/instructions/:id",
