@@ -1,5 +1,5 @@
 import { ReminderController } from "@/controllers";
-import { CreateReminderDto } from "@/decorators";
+import { CreateReminderDto, UpdateReminderDto } from "@/decorators";
 import { UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
@@ -14,15 +14,12 @@ import { ReminderService } from "@/services";
 export const reminderRouter = createRouter();
 const reminderController = ReminderController.getInstance();
 
-reminderRouter.get(
-  "/analytics",
-  validateToken,
-  reminderController.reminderAnalytics
-);
+reminderRouter.use(validateToken);
+
+reminderRouter.get("/analytics", reminderController.reminderAnalytics);
 
 reminderRouter.post(
   "/create",
-  validateToken,
   permissionRequirement([UserTypes.USER]),
   uploadSingleFile({
     name: "file",
@@ -43,20 +40,41 @@ reminderRouter.post(
 
 reminderRouter.get(
   "/all",
-  validateToken,
   permissionRequirement([UserTypes.USER]),
   reminderController.getReminders
 );
 
 reminderRouter.get(
   "/:id",
-  validateToken,
   permissionRequirement([UserTypes.USER]),
   reminderController.getReminderById
 );
 
+reminderRouter.patch(
+  "/update/:id",
+  uploadSingleFile({
+    name: "file",
+    mimeTypes: [
+      "text/csv",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/json",
+    ],
+    configs: {
+      dest: "uploads/",
+    },
+  }),
+  ReminderService.middlewares.parseReminderFile,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(UpdateReminderDto),
+  reminderController.updateReminder
+);
+
+reminderRouter.patch("/activate/:id", reminderController.activateReminder);
+reminderRouter.patch("/deactivate/:id", reminderController.deactivateReminder);
+
 reminderRouter.delete(
-  "/:id",
+  "/delete/:id",
   validateToken,
   permissionRequirement([UserTypes.USER]),
   reminderController.deleteReminder

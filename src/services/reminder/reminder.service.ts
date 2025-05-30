@@ -1,6 +1,8 @@
-import { CreateReminderDto } from "@/decorators";
+import { CreateReminderDto, UpdateReminderDto } from "@/decorators";
 import { ReminderChannels, ReminderTypes, UserTypes } from "@/enums";
 import {
+  isOwnerUser,
+  isSuperAdmin,
   throwBadRequestError,
   throwForbiddenError,
   throwNotFoundError,
@@ -24,6 +26,7 @@ export class ReminderService {
   private readonly reminderModel: Model<IReminder> = Reminder;
   private readonly reminderPaginationService: PaginationService<IReminder>;
   static logger: Logger = logger;
+
   static middlewares: Record<string, MiddleWare> = {
     parseReminderFile: async (req, res, next) => {
       const file = req.file;
@@ -31,8 +34,12 @@ export class ReminderService {
       const { emails, phones } = req.body;
 
       // Convert bullish string "true" or "false" to Boolean
+      const bulkFieldExist = req.body.isBulk ?? false;
       const isBulk = toBoolean(req.body.isBulk);
-      req.body.isBulk = isBulk;
+
+      if (bulkFieldExist) {
+        req.body.isBulk = isBulk;
+      }
 
       if (isBulk) {
         if (emails || phones) return next();
@@ -226,6 +233,21 @@ export class ReminderService {
     return { reminder };
   }
 
+  async updateReminder(auth: AuthData, id: string, body: UpdateReminderDto) {
+    const reminder = await this.reminderModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(id),
+        userId: new Types.ObjectId(auth.userId),
+      },
+      {
+        ...body,
+      },
+      { new: true, runValidators: true }
+    );
+    if (!reminder) return throwNotFoundError("Reminder not found");
+    return { reminder, message: "Reminder updated successfully" };
+  }
+
   async getReminders(auth: AuthData) {
     return await this.reminderPaginationService.paginate(
       { query: { userId: new Types.ObjectId(auth.userId) } },
@@ -243,6 +265,27 @@ export class ReminderService {
     )
       return throwForbiddenError("You are not allowed to access this resource");
     return { reminder };
+  }
+
+  async deactivateReminder(auth: AuthData, id: string) {
+    const reminder = await this.setReminderStatus(auth, id, false);
+    return { reminder, message: "Reminder deactivated" };
+  }
+
+  async activateReminder(auth: AuthData, id: string) {
+    const reminder = await this.setReminderStatus(auth, id, true);
+    return { reminder, message: "Reminder activated" };
+  }
+
+  async setReminderStatus(auth: AuthData, id: string, status: boolean) {
+    const reminder = await this.reminderModel.findById(id);
+    if (!reminder) return throwNotFoundError("Reminder not foud");
+    if (!isOwnerUser(auth, reminder.userId) && !isSuperAdmin(auth)) {
+      return throwForbiddenError("You are not allowed to access this resource");
+    }
+    reminder.isActive = status;
+    await reminder.save();
+    return reminder;
   }
 
   async deleteReminder(authData: AuthData, id: string) {

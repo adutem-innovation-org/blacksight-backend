@@ -1,4 +1,4 @@
-import { CreateReminderDto } from "@/decorators/reminder";
+import { CreateReminderDto, UpdateReminderDto } from "@/decorators";
 import { sendSuccessResponse } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { ReminderService } from "@/services";
@@ -43,6 +43,18 @@ export class ReminderController {
     );
   };
 
+  updateReminder = async (
+    req: GenericReq<UpdateReminderDto>,
+    res: Response
+  ) => {
+    const data = await this.reminderService.updateReminder(
+      req.authData!,
+      req.params.id,
+      req.body
+    );
+    return sendSuccessResponse(res, data);
+  };
+
   getReminders = async (req: Request, res: Response) => {
     const data = await this.reminderService.getReminders(req.authData!);
     return sendSuccessResponse(res, data);
@@ -50,6 +62,22 @@ export class ReminderController {
 
   getReminderById = async (req: Request, res: Response) => {
     const data = await this.reminderService.getReminderById(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  activateReminder = async (req: Request, res: Response) => {
+    const data = await this.reminderService.activateReminder(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  deactivateReminder = async (req: Request, res: Response) => {
+    const data = await this.reminderService.deactivateReminder(
       req.authData!,
       req.params.id
     );
