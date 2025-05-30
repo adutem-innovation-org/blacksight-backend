@@ -170,7 +170,7 @@ export class BotService {
         businessId: new Types.ObjectId(auth.userId),
       },
       body,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!bot) return throwNotFoundError("Bot not found");
