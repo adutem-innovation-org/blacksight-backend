@@ -68,7 +68,7 @@ export class UpdateBotConfigurationDto {
   @IsBoolean({ message: "Schedule meeting must be boolean" })
   scheduleMeeting?: boolean;
 
-  @ValidateIf((o) => o.scheduleMeeting !== undefined)
+  @ValidateIf((o) => o.scheduleMeeting)
   @IsMongoId({
     message: "Meeting provider identifier must be a valid database identifier",
   })
