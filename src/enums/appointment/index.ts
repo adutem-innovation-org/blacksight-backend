@@ -11,3 +11,9 @@ export enum MeetingProvidersEnum {
   GOOGLE = "google-meet",
   MICROSOFT = "microsoft-teams",
 }
+
+export enum AppointmentParam {
+  DATE = "date",
+  TIME = "time",
+  EMAIL = "email",
+}

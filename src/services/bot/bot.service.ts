@@ -1,4 +1,11 @@
-import { BotStatus, ConversationMode, Intent, RoleEnum } from "@/enums";
+import {
+  AppointmentParam,
+  BotStatus,
+  ConversationMode,
+  Events,
+  Intent,
+  RoleEnum,
+} from "@/enums";
 import {
   AskChatbotDto,
   ConfigureBotDto,
@@ -25,25 +32,26 @@ import {
   KnowledgeBase,
   MeetingProvider,
 } from "@/models";
-import { CacheService, PaginationService } from "@/utils";
+import { CacheService, eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 import { KnowledgeBaseService } from "../knowledge-base";
 import { ConversationService } from "./conversation.service";
 import OpenAI from "openai";
 import { config } from "@/config";
 import { intentActionsMapper } from "@/constants";
+import EventEmitter2 from "eventemitter2";
 
 export class BotService {
   private static instance: BotService;
-  private readonly botModel: Model<IBot> = Bot;
-  private readonly openai: OpenAI;
+  private readonly eventEmitter: EventEmitter2 = eventEmitter;
 
+  private readonly botModel: Model<IBot> = Bot;
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
   private readonly meetingProviderModel: Model<IMeetingProvider> =
     MeetingProvider;
   private readonly conversationModel: Model<IConversation> = Conversation;
-
   private readonly botPaginationService: PaginationService<IBot>;
+
   private readonly knowledgeBaseService: KnowledgeBaseService;
   private readonly conversationService: ConversationService;
   private readonly cacheService: CacheService;
@@ -52,7 +60,6 @@ export class BotService {
     this.botPaginationService = new PaginationService(this.botModel);
     this.knowledgeBaseService = KnowledgeBaseService.getInstace();
     this.conversationService = ConversationService.getInstance();
-    this.openai = new OpenAI({ apiKey: config.openai.apiKey });
     this.cacheService = CacheService.getInstance();
   }
 
@@ -308,16 +315,34 @@ export class BotService {
     // ✅ Step 3: Handle intents
     switch (intent.intent) {
       case Intent.BOOK_APPOINTMENT:
-        console.log("Book appointment initialized >> ", intent);
+        this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+          businessId,
+          conversationId,
+        });
         break;
       case Intent.SET_APPOINTMENT_DATE:
-        console.log("Appointment date set >> ", intent);
+        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          param: AppointmentParam.DATE,
+          value: intent.parameters?.date,
+          businessId,
+          conversationId,
+        });
         break;
       case Intent.SET_APPOINTMENT_EMAIL:
-        console.log("Appointment email set >> ", intent);
+        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          param: AppointmentParam.EMAIL,
+          value: intent.parameters?.email,
+          businessId,
+          conversationId,
+        });
         break;
       case Intent.SET_APPOINTMENT_TIME:
-        console.log("Appointment time set >> ", intent);
+        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          param: AppointmentParam.TIME,
+          value: intent.parameters?.time,
+          businessId,
+          conversationId,
+        });
       default:
         break;
     }

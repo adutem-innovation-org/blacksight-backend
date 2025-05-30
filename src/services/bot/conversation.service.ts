@@ -197,7 +197,7 @@ You are an intent detection assistant. Classify the user's input into one of the
 - SET_APPOINTMENT_EMAIL
 - UNKNOWN
 
-Extract relevant parameters (e.g., date, time, email) when applicable.
+Extract relevant parameters (e.g., date, time, email) when applicable, in the right format. e.g. date and should come in Date string format when possible
 
 Return a JSON response in this format:
 {

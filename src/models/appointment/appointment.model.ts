@@ -5,10 +5,10 @@ const collectionName = "appointments";
 // Interface for Appointment Document
 export interface IAppointment extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
-  conversationId: Types.ObjectId;
+  conversationId: String;
   customerEmail: string;
-  appointmentDate: Date;
-  appointmentTime: Date;
+  appointmentDate: String;
+  appointmentTime: String;
   meetingLink: string;
   status: AppointmentStatus;
   dateTime?: Date; // Virtual property
@@ -18,18 +18,21 @@ export interface IAppointment extends Document<Types.ObjectId> {
 // Define the Appointment Schema
 const AppointmentSchema = new Schema<IAppointment>(
   {
-    businessId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
-    conversationId: {
+    businessId: {
       type: Schema.Types.ObjectId,
-      required: true,
-      ref: "conversations",
+      required: [true, "Business id is required"],
+      ref: "users",
+    },
+    conversationId: {
+      type: String,
+      required: [true, "Conversation id is required"],
     },
     customerEmail: {
       type: String,
       match: [emailRegex, "Please provide a valid email"],
     },
-    appointmentDate: { type: Date },
-    appointmentTime: { type: Date },
+    appointmentDate: { type: String },
+    appointmentTime: { type: String },
     meetingLink: {
       type: String,
       // Optional: set only if the bot is configured for automatic meeting creation
@@ -49,8 +52,8 @@ const AppointmentSchema = new Schema<IAppointment>(
 
 // Virtual to combine date and time into one Date object
 AppointmentSchema.virtual("dateTime").get(function () {
-  const date = this.appointmentDate;
-  const time = this.appointmentTime;
+  const date = new Date(this.appointmentDate.toString());
+  const time = new Date(this.appointmentTime.toString());
   if (date && time) {
     return new Date(
       date.getFullYear(),

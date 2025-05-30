@@ -1,18 +1,36 @@
-import { AppointmentStatus, UserTypes } from "@/enums";
-import { throwForbiddenError, throwNotFoundError } from "@/helpers";
+import {
+  AppointmentParam,
+  AppointmentStatus,
+  Events,
+  UserTypes,
+} from "@/enums";
+import {
+  logJsonError,
+  throwForbiddenError,
+  throwNotFoundError,
+} from "@/helpers";
 import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
 import { Appointment, IAppointment } from "@/models";
-import { PaginationService } from "@/utils";
+import { eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 import { startOfDay, subDays, format, endOfDay } from "date-fns";
+import EventEmitter2 from "eventemitter2";
+import { Logger } from "winston";
+import { logger } from "@/logging";
 
 export class AppointmentService {
   private static instance: AppointmentService;
+  private static jsonErrorLogger = logJsonError;
+
+  private readonly eventEmitter: EventEmitter2 = eventEmitter;
+  private readonly logger: Logger = logger;
+
   private readonly appointmentModel: Model<IAppointment> = Appointment;
   private readonly paginationService: PaginationService<IAppointment>;
 
   constructor() {
     this.paginationService = new PaginationService(this.appointmentModel);
+    this._setupEventListeners();
   }
 
   static getInstance() {
@@ -20,6 +38,65 @@ export class AppointmentService {
       this.instance = new AppointmentService();
     }
     return this.instance;
+  }
+
+  private _setupEventListeners() {
+    this.eventEmitter.on(Events.INIT_APPOINTMENT, (payload) =>
+      this._initAppointment(payload)
+    );
+
+    this.eventEmitter.on(Events.SET_APPOINTMENT_PARAM, (payload) =>
+      this._setAppointmentParam(payload)
+    );
+  }
+
+  private async _setAppointmentParam(payload: {
+    param: AppointmentParam;
+    value: any;
+    conversationId: string;
+    businessId: string;
+  }) {
+    try {
+      const { param, value, conversationId, businessId } = payload;
+      const query = {
+        businessId: new Types.ObjectId(businessId),
+        conversationId,
+      };
+      let valueToSet: Record<string, any> = {
+        businessId,
+        conversationId,
+      };
+      switch (param) {
+        case AppointmentParam.DATE:
+          valueToSet["appointmentDate"] = value;
+          break;
+        case AppointmentParam.TIME:
+          valueToSet["appointmentTime"] = value;
+          break;
+        case AppointmentParam.EMAIL:
+          valueToSet["customerEmail"] = value;
+          break;
+        default:
+          break;
+      }
+
+      let appointment = await this.appointmentModel.findOneAndUpdate(
+        query,
+        valueToSet,
+        { new: true, upsert: true }
+      );
+
+      if (
+        appointment.appointmentDate &&
+        appointment.appointmentTime &&
+        appointment.customerEmail
+      ) {
+        appointment.status = AppointmentStatus.SCHEDULED;
+        await appointment.save();
+      }
+    } catch (error) {
+      AppointmentService.jsonErrorLogger(error);
+    }
   }
 
   async analytics(auth: AuthData) {
@@ -98,6 +175,32 @@ export class AppointmentService {
     return { data: Object.values(stats) };
   }
 
+  private async _initAppointment(payload: {
+    businessId: string;
+    conversationId: string;
+  }) {
+    try {
+      await this.appointmentModel.findOneAndUpdate(
+        {
+          businessId: payload.businessId,
+          conversationId: payload.conversationId,
+        },
+        {
+          businessId: payload.businessId,
+          conversationId: payload.conversationId,
+        },
+        { upsert: true }
+      );
+    } catch (error) {
+      this.logger.error("Unable to initilize appointment");
+      AppointmentService.jsonErrorLogger(error);
+    }
+  }
+
+  /**
+   * @deprecated No longer used
+   * @param data
+   */
   async scheduleAppointment(data: ScheduleAppointmentBody) {
     const {
       businessId,

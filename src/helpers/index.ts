@@ -1,5 +1,6 @@
 import { UserTypes } from "@/enums";
 import { AuthData } from "@/interfaces";
+import { logger } from "@/logging";
 import { Types } from "mongoose";
 
 export * from "./send-response";
@@ -26,3 +27,7 @@ export const isOwner = (auth: AuthData, id: Types.ObjectId) =>
 
 export const isOwnerUser = (authData: AuthData, id: Types.ObjectId) =>
   isUser(authData) && isOwner(authData, id);
+
+export const logJsonError = (err: any) => {
+  logger.error(JSON.stringify(err, null, 2));
+};
