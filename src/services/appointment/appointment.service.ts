@@ -4,6 +4,7 @@ import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
 import { Appointment, IAppointment } from "@/models";
 import { PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
+import { startOfDay, subDays, format, endOfDay } from "date-fns";
 
 export class AppointmentService {
   private static instance: AppointmentService;
@@ -49,6 +50,52 @@ export class AppointmentService {
     });
 
     return { data: analytics };
+  }
+
+  async bookingStats(auth: AuthData) {
+    // Get today's date.
+    // Our stat range is today and 6 days prior
+    const today = startOfDay(new Date()); // Set time to 00:00:00
+    const startDate = subDays(today, 6); // 6 days before today
+    const midnightToday = endOfDay(new Date());
+
+    // ✅ Construct query
+    const query: Record<string, any> = {};
+    query["status"] = AppointmentStatus.SCHEDULED;
+
+    if (auth.userId === UserTypes.USER) {
+      query["businessId"] = new Types.ObjectId(auth.userId);
+    }
+
+    // ✅ Get all scheduled appointments in the range
+    const appointments = await this.appointmentModel.find({
+      ...query,
+      createdAt: {
+        $gte: startDate,
+        $lte: midnightToday,
+      },
+    });
+
+    // ✅ Create an array to hold count per day;
+    const stats: Record<string, any> = {};
+
+    // ✅ Initialize with 0s for each day
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(today, i);
+      const day = format(date, "EEE");
+      stats[day] = { day, bookings: 0 }; // e.g.{ Mon: {day: "Mon", bookings: 0}}
+    }
+
+    // ✅ Count appointments per day
+    for (const appt of appointments) {
+      const day = format(startOfDay(appt.createdAt), "EEE");
+      if (stats[day] !== undefined) {
+        stats[day]["bookings"]++;
+      }
+    }
+
+    // ✅ Return an array of object {day: "Mon" | "Tue" etc, bookings: Number of appointment created in each day}
+    return { data: Object.values(stats) };
   }
 
   async scheduleAppointment(data: ScheduleAppointmentBody) {

@@ -12,6 +12,7 @@ export interface IAppointment extends Document<Types.ObjectId> {
   meetingLink: string;
   status: AppointmentStatus;
   dateTime?: Date; // Virtual property
+  createdAt: Date;
 }
 
 // Define the Appointment Schema
