@@ -6,6 +6,7 @@ import { knowledgeBaseRouter } from "./knowledge-base.routes";
 import { botRouter } from "./bot.routes";
 import { meetingProviderRouter } from "./meeting-provider.routes";
 import { appointmentRouter } from "./appointment.routes";
+import { notificationRouter } from "./notification.routes";
 
 export const appRouter = createRouter();
 
@@ -16,3 +17,4 @@ appRouter.use("/bot", botRouter);
 appRouter.use("/knowledge-base", knowledgeBaseRouter);
 appRouter.use("/meeting-provider", meetingProviderRouter);
 appRouter.use("/reminder", reminderRouter);
+appRouter.use("/notification", notificationRouter);

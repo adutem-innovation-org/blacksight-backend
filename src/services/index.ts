@@ -6,3 +6,4 @@ export * from "./bot";
 export * from "./activity";
 export * from "./meeting-provider";
 export * from "./appointment";
+export * from "./notification";

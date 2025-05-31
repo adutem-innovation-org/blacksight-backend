@@ -5,3 +5,4 @@ export * from "./knowledge-base.controller";
 export * from "./bot.controller";
 export * from "./meeting-provider.controller";
 export * from "./appointment.controller";
+export * from "./notification.controller";
