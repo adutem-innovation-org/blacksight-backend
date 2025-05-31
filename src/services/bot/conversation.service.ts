@@ -154,13 +154,21 @@ export class ConversationService {
     unsummarizedMessages,
     userQuery,
     lastUnsummarizedMessageRole,
+    extractedKB,
+    customInstruction,
   }: {
     summaries: string[];
     unsummarizedMessages: IMessage[];
     userQuery: string;
     lastUnsummarizedMessageRole: RoleEnum | undefined;
+    extractedKB: string;
+    customInstruction: string;
   }) {
-    const developerPrompt = this.createIntentDeveloperPrompt(summaries);
+    const developerPrompt = this.createIntentDeveloperPrompt(
+      summaries,
+      extractedKB,
+      customInstruction
+    );
     const openaiResponse = await this.openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -187,7 +195,11 @@ export class ConversationService {
     }
   }
 
-  createIntentDeveloperPrompt(summaries: string[]) {
+  createIntentDeveloperPrompt(
+    summaries: string[],
+    extractedKB: string,
+    customInstruction: string
+  ) {
     return `
 You are an intent detection assistant. Classify the user's input into one of the following intents:
 
@@ -210,10 +222,15 @@ Return a JSON response in this format:
 
 Context (past conversation summaries):
 ${summaries.join("\n")}
+Use the following information if applicable to answer user queries:
+${extractedKB}
+
+${customInstruction}
+
 
 Strict rule:
 1. When you can provide information relevant to what they ask. Be clear about it. Don't get too creative.
-2. You response must always follow the provided format above.
+2. You response must always follow the provided json format above.
 `;
   }
 }

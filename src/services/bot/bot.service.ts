@@ -17,6 +17,7 @@ import {
   isOwnerUser,
   isSuperAdmin,
   isUser,
+  logJsonError,
   throwForbiddenError,
   throwNotFoundError,
   throwUnprocessableEntityError,
@@ -40,18 +41,26 @@ import OpenAI from "openai";
 import { config } from "@/config";
 import { intentActionsMapper } from "@/constants";
 import EventEmitter2 from "eventemitter2";
+import { Logger } from "winston";
+import { logger } from "@/logging";
 
 export class BotService {
   private static instance: BotService;
-  private readonly eventEmitter: EventEmitter2 = eventEmitter;
 
+  // Helpers
+  private readonly eventEmitter: EventEmitter2 = eventEmitter;
+  private static readonly logJsonError = logJsonError;
+  private readonly logger: Logger = logger;
+
+  // Models
   private readonly botModel: Model<IBot> = Bot;
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
   private readonly meetingProviderModel: Model<IMeetingProvider> =
     MeetingProvider;
   private readonly conversationModel: Model<IConversation> = Conversation;
-  private readonly botPaginationService: PaginationService<IBot>;
 
+  // Services
+  private readonly botPaginationService: PaginationService<IBot>;
   private readonly knowledgeBaseService: KnowledgeBaseService;
   private readonly conversationService: ConversationService;
   private readonly cacheService: CacheService;
@@ -306,9 +315,30 @@ export class BotService {
       conversation
     );
 
+    // Extract relevant knowledge base
+    let extractedKB = "";
+    try {
+      const documentId = bot.knowledgeBase.documentId.toString();
+      console.log("Document Id", documentId);
+      extractedKB = await this.knowledgeBaseService.queryKnowledgeBase(
+        businessId,
+        documentId,
+        userQuery
+      );
+    } catch (error) {
+      this.logger.error("Unable to extract knowledge base");
+      BotService.logJsonError(error);
+    }
+
+    // Get bot custom instructions
+    const customInstruction =
+      bot.instructions ?? "No custom instruction from the business.";
+
     // ✅ Step 2: Detect message intent
     const intent = await this.conversationService.detectUserIntent({
       ...context,
+      customInstruction,
+      extractedKB,
       userQuery,
     });
 
@@ -429,12 +459,20 @@ export class BotService {
     botId: string,
     conversationId: string
   ) {
-    const conversation = await this.conversationModel.findOneAndDelete({
-      botid: new Types.ObjectId(botId),
-      conversationId: new Types.ObjectId(conversationId),
-      mode: ConversationMode.TRAINING,
-      businessId: new Types.ObjectId(auth.userId),
-    });
+    const conversation = await this.conversationModel.findOneAndUpdate(
+      {
+        botId: new Types.ObjectId(botId),
+        conversationId,
+        mode: ConversationMode.TRAINING,
+        businessId: new Types.ObjectId(auth.userId),
+      },
+      {
+        messages: [],
+        summaries: [],
+      },
+      { new: true }
+    );
+    if (!conversation) return throwNotFoundError("Conversation not found");
     return { message: "Training conversation deleted", conversation };
   }
 }
