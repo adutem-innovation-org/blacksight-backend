@@ -266,14 +266,6 @@ export class KnowledgeBaseService {
     const kb = await this.setKbStatus(auth, id, false);
 
     // Deactivate any bot connected to this knowledge base
-    /**
-     * @deprecated
-     * @description This approach has been deprecated because deactivating bot with inactive knowledge base is a key operation
-     */
-    // KnowledgeBaseService.eventEmitter.emit(Events.DEACTIVATE_BOTS_BY_KB_ID, {
-    //   auth,
-    //   knowledgeBaseId: id,
-    // });
     await this.deactivateBotsByKbId(auth, id);
 
     return { knowledgeBase: kb, message: "Knolwedgebase deactivated" };
@@ -291,6 +283,11 @@ export class KnowledgeBaseService {
     return kb;
   }
 
+  /**
+   * This service method deactivates bot that are associated to a particular knowledgebase.
+   * @param auth The current authenticated entity that issued this action
+   * @param knowledgeBaseId The mongodb identifier of the knowledge base to be deleted
+   */
   async deactivateBotsByKbId(auth: AuthData, knowledgeBaseId: string) {
     try {
       const allAssociatedBots = await this.botModel.find({

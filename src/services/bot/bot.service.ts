@@ -51,7 +51,6 @@ export class BotService {
   private readonly eventEmitter: EventEmitter2 = eventEmitter;
   private static readonly logJsonError = logJsonError;
   private readonly logger: Logger = logger;
-  private static readonly eventEmitter: EventEmitter2 = eventEmitter;
 
   // Models
   private readonly botModel: Model<IBot> = Bot;
@@ -71,7 +70,6 @@ export class BotService {
     this.knowledgeBaseService = KnowledgeBaseService.getInstace();
     this.conversationService = ConversationService.getInstance();
     this.cacheService = CacheService.getInstance();
-    this._setupEventListeners();
   }
 
   static getInstance() {
@@ -79,12 +77,6 @@ export class BotService {
       this.instance = new BotService();
     }
     return this.instance;
-  }
-
-  private _setupEventListeners() {
-    BotService.eventEmitter.on(Events.DEACTIVATE_BOTS_BY_KB_ID, (payload) =>
-      this.deactivateBotsByKbId(payload)
-    );
   }
 
   async updateAllBots(data: any) {
@@ -276,41 +268,6 @@ export class BotService {
     });
     if (!bot) return throwNotFoundError("Bot not found");
     return { bot, message: "Bot deleted successfully" };
-  }
-
-  /**
-   * This service method deactivates bot that are associated to a particular knowledgebase.
-   * @param auth The current authenticated entity that issued this action
-   * @param knowledgeBaseId The mongodb identifier of the knowledge base to be deleted
-   */
-  async deactivateBotsByKbId({
-    auth,
-    knowledgeBaseId,
-  }: {
-    auth: AuthData;
-    knowledgeBaseId: string;
-  }) {
-    try {
-      const allAssociatedBots = await this.botModel.find({
-        knowledgeBaseId: new Types.ObjectId(knowledgeBaseId),
-      });
-
-      if (allAssociatedBots.length === 0) return;
-
-      const botDeactivationPromises = allAssociatedBots
-        .filter(
-          (bot) => isOwnerUser(auth, bot.businessId) || isSuperAdmin(auth)
-        )
-        .map(async (bot) => {
-          bot.status = BotStatus.INACTIVE;
-          bot.isActive = false;
-          await bot.save();
-        });
-
-      await Promise.allSettled(botDeactivationPromises);
-    } catch (error) {
-      BotService.logJsonError(error);
-    }
   }
 
   async startConversation(authData: AuthData, botId: string) {
