@@ -83,6 +83,14 @@ export class BotController {
     return sendSuccessResponse(res, data);
   };
 
+  activateBot = async (req: Request, res: Response) => {
+    const data = await this.botService.activateBot(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
   deleteBot = async (req: Request, res: Response) => {
     const data = await this.botService.deleteBot(req.authData!, req.params.id);
     return sendSuccessResponse(res, data);

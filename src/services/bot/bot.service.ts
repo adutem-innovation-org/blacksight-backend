@@ -43,6 +43,7 @@ import { intentActionsMapper } from "@/constants";
 import EventEmitter2 from "eventemitter2";
 import { Logger } from "winston";
 import { logger } from "@/logging";
+import { auth } from "google-auth-library";
 
 export class BotService {
   private static instance: BotService;
@@ -226,20 +227,33 @@ export class BotService {
    * @returns Promise<{bot: IBot, message: string}>
    */
   async deactivateBot(authData: AuthData, id: string) {
+    const bot = await this.setBotStatus(authData, id, false);
+    return { bot, message: "Bot deactivated" };
+  }
+
+  /**
+   * The service method is used to re-activate a bot
+   * @param authData The current authenticated entity
+   * @param id The mongodb identifier of the bot to be re-activated
+   * @returns Promise<{bot: IBot, message: string}>
+   */
+  async activateBot(authData: AuthData, id: string) {
+    const bot = await this.setBotStatus(authData, id, true);
+    return { bot, message: "Bot deactivated" };
+  }
+
+  async setBotStatus(auth: AuthData, id: string, status: boolean) {
     const bot = await this.botModel.findById(id);
     if (!bot) return throwNotFoundError("Bot not found");
-    if (!isOwnerUser(authData, bot.businessId) && !isSuperAdmin(authData)) {
-      return throwForbiddenError(
-        "You are not allowed to access this resource."
-      );
+    if (!isOwnerUser(auth, bot.businessId) && !isSuperAdmin(auth)) {
+      return throwForbiddenError("You are not allowed to access this resource");
     }
 
-    bot.status = BotStatus.INACTIVE;
-    bot.isActive = false;
-
+    bot.status = status ? BotStatus.ACTIVE : BotStatus.INACTIVE;
+    bot.isActive = status;
     await bot.save();
 
-    return { bot, message: "Bot deactivated" };
+    return bot;
   }
 
   /**

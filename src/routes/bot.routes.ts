@@ -56,6 +56,7 @@ botRouter.delete(
 );
 
 botRouter.patch("/deactivate/:id", botController.deactivateBot);
+botRouter.patch("/activate/:id", botController.activateBot);
 
 botRouter.patch(
   "/instructions/:id",
