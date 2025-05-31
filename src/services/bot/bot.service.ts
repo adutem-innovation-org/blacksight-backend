@@ -248,11 +248,40 @@ export class BotService {
       return throwForbiddenError("You are not allowed to access this resource");
     }
 
+    if (status) {
+      await this.runKBValidation(
+        bot.knowledgeBaseId.toString(),
+        "Cannot activate this bot, because its associated knowledge base has been deleted",
+        "Cannot activate this bot, because its associated knowledge base is inactive."
+      );
+    }
+
     bot.status = status ? BotStatus.ACTIVE : BotStatus.INACTIVE;
     bot.isActive = status;
     await bot.save();
 
     return bot;
+  }
+
+  /**
+   * Validates in the current knowledge base exists and is active
+   * @param botId
+   */
+  async runKBValidation(
+    kbId: string,
+    notFoundErrorMsg?: string,
+    inActiveErrorMsg?: string
+  ) {
+    const kb = await this.knowledgeBaseModel.findById(kbId);
+    if (!kb)
+      return throwNotFoundError(
+        notFoundErrorMsg ?? "The knowledgebase does not exist"
+      );
+
+    if (!kb.isActive)
+      return throwUnprocessableEntityError(
+        inActiveErrorMsg ?? "The knowledgebase is inactive"
+      );
   }
 
   /**
