@@ -254,6 +254,9 @@ export class KnowledgeBaseService {
     // Delete from Pinecone
     await pineconeIndex.deleteMany(idsToDelete);
 
+    // Deactivate any bot connected to this knowledge base
+    await this.deactivateBotsByKbId(auth, id);
+
     return { message: "Knowledge base deleted.", knowledgeBase };
   }
 
