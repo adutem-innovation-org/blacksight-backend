@@ -1,7 +1,7 @@
 import { AddKnowledgeBaseDto } from "@/decorators";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
-import { IKnowledgeBase, KnowledgeBase } from "@/models";
+import { Bot, IBot, IKnowledgeBase, KnowledgeBase } from "@/models";
 import { eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 import fs from "fs";
@@ -11,6 +11,7 @@ import mammoth from "mammoth";
 import {
   isOwnerUser,
   isSuperAdmin,
+  logJsonError,
   throwForbiddenError,
   throwNotFoundError,
   throwServerError,
@@ -19,16 +20,18 @@ import {
 import { Pinecone } from "@pinecone-database/pinecone";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { Events, UserTypes } from "@/enums";
+import { BotStatus, Events, UserTypes } from "@/enums";
 import { Logger } from "winston";
 import EventEmitter2 from "eventemitter2";
 
 export class KnowledgeBaseService {
   private static instance: KnowledgeBaseService;
   static logger: Logger = logger;
+  private static readonly logJsonError = logJsonError;
   static readonly eventEmitter: EventEmitter2 = eventEmitter;
 
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
+  private readonly botModel: Model<IBot> = Bot;
 
   private readonly knowledgeBasePaginationService: PaginationService<IKnowledgeBase>;
   private readonly pinecone: Pinecone;
@@ -263,10 +266,15 @@ export class KnowledgeBaseService {
     const kb = await this.setKbStatus(auth, id, false);
 
     // Deactivate any bot connected to this knowledge base
-    KnowledgeBaseService.eventEmitter.emit(Events.DEACTIVATE_BOTS_BY_KB_ID, {
-      auth,
-      knowledgeBaseId: id,
-    });
+    /**
+     * @deprecated
+     * @description This approach has been deprecated because deactivating bot with inactive knowledge base is a key operation
+     */
+    // KnowledgeBaseService.eventEmitter.emit(Events.DEACTIVATE_BOTS_BY_KB_ID, {
+    //   auth,
+    //   knowledgeBaseId: id,
+    // });
+    await this.deactivateBotsByKbId(auth, id);
 
     return { knowledgeBase: kb, message: "Knolwedgebase deactivated" };
   }
@@ -281,5 +289,29 @@ export class KnowledgeBaseService {
     await kb.save();
 
     return kb;
+  }
+
+  async deactivateBotsByKbId(auth: AuthData, knowledgeBaseId: string) {
+    try {
+      const allAssociatedBots = await this.botModel.find({
+        knowledgeBaseId: new Types.ObjectId(knowledgeBaseId),
+      });
+
+      if (allAssociatedBots.length === 0) return;
+
+      const botDeactivationPromises = allAssociatedBots
+        .filter(
+          (bot) => isOwnerUser(auth, bot.businessId) || isSuperAdmin(auth)
+        )
+        .map(async (bot) => {
+          bot.status = BotStatus.INACTIVE;
+          bot.isActive = false;
+          await bot.save();
+        });
+
+      await Promise.allSettled(botDeactivationPromises);
+    } catch (error) {
+      KnowledgeBaseService.logJsonError(error);
+    }
   }
 }
