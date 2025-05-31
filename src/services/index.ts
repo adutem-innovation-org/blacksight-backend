@@ -7,3 +7,4 @@ export * from "./activity";
 export * from "./meeting-provider";
 export * from "./appointment";
 export * from "./notification";
+export * from "./api-key";
