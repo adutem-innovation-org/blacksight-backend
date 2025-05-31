@@ -11,3 +11,4 @@ export * from "./notification.dto";
 export * from "./forgot-password";
 export * from "./update-address.dto";
 export * from "./update-profile.dto";
+export * from "./update-profile-image.dto";

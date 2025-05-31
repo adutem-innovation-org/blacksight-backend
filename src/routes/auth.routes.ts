@@ -1,6 +1,7 @@
 import { createRouter } from "@/helpers";
 import {
   permissionRequirement,
+  uploadSingleFile,
   validateDTO,
   validateToken,
 } from "@/middlewares";
@@ -23,6 +24,7 @@ import {
 import { AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
 import { googleLoginMiddleware } from "@/services";
+import { IMAGE_MIMETYPES } from "@/constants";
 
 export const authRouter = createRouter();
 const authController = AuthController.getInstance();
@@ -86,6 +88,22 @@ authRouter.patch(
   permissionRequirement([UserTypes.USER]),
   validateDTO(UpdateAddressDto),
   authController.updateAddress
+);
+
+/**
+ * Update user profile image
+ * ✅ Validate the request is from an authenticated user
+ * ✅ Check if the profileImage is provided and that it is of the supported mimetype
+ */
+authRouter.post(
+  "/user/profile-image",
+  validateToken,
+  uploadSingleFile({
+    name: "profileImage",
+    required: true,
+    mimeTypes: IMAGE_MIMETYPES,
+  }),
+  authController.updateProfileImage
 );
 
 authRouter.get("/admin/seed", authController.seedAdmin);

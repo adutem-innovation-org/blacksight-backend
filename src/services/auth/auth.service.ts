@@ -7,6 +7,7 @@ import {
   eventEmitter,
   MailgunEmailService,
   PaginationService,
+  StorageService,
 } from "@/utils";
 import { Model, Types } from "mongoose";
 import { v4 } from "uuid";
@@ -27,8 +28,10 @@ import {
   SetupPasswordDto,
   UpdateAddressDto,
   UpdateProfileDto,
+  UpdateProfileImageDto,
 } from "@/decorators";
 import {
+  logJsonError,
   throwBadRequestError,
   throwConflictError,
   throwForbiddenError,
@@ -40,9 +43,13 @@ import { randomUUID, webcrypto } from "crypto";
 import EventEmitter2 from "eventemitter2";
 import { ActivityService } from "../activity";
 import { ActivityEvents } from "@/events";
+import { Logger } from "winston";
+import { logger } from "@/logging";
 
 export class AuthService {
   private static instance: AuthService;
+  private static readonly logger: Logger = logger;
+  private static readonly logJsonError = logJsonError;
 
   // Model
   private readonly userModel: Model<IUser> = User;
@@ -53,6 +60,7 @@ export class AuthService {
   private readonly cacheService: CacheService;
   private readonly jwtService: JwtService;
   private readonly emailService: MailgunEmailService;
+  private readonly storageService: StorageService;
 
   // Pagination
   private readonly userPagination: PaginationService<IUser>;
@@ -65,6 +73,7 @@ export class AuthService {
     this.cacheService = CacheService.getInstance();
     this.jwtService = JwtService.getInstance();
     this.emailService = MailgunEmailService.getInstance();
+    this.storageService = StorageService.getInstance();
     this.userPagination = new PaginationService(this.userModel);
     this.adminPagination = new PaginationService(this.adminModel);
   }
@@ -569,6 +578,42 @@ export class AuthService {
     user = (await this.userModel.findById(auth.userId).select(GetUserAltDto))!;
 
     return { user };
+  }
+
+  async updateProfileImage(auth: AuthData, data: UpdateProfileImageDto) {
+    const user = await this.userModel.findById(auth.userId);
+
+    if (!user)
+      return throwUnauthorizedError("Invalid account, please try again.");
+
+    const fileExtension = data.profileImage.originalname.split(".").pop()!;
+    const filePath = this.generateFilePath(auth.userId, fileExtension);
+
+    const profileImage = await this.storageService.uploadFile(
+      data.profileImage,
+      filePath
+    );
+
+    if (user.imageUrl) {
+      try {
+        await this.storageService.deleteFile(user.imageUrl);
+      } catch (error) {
+        AuthService.logger.error(
+          `Unable to delete existing profile image for user ${auth.userId}`
+        );
+        AuthService.logJsonError(error);
+      }
+    }
+
+    user.imageUrl = profileImage.fileUrl;
+
+    await user.save();
+
+    return { imageUrl: user.imageUrl };
+  }
+
+  generateFilePath(userId: string, ext: string) {
+    return `images/profile-images/${userId}_${Date.now()}.${ext}`;
   }
 
   async seedAdmin() {

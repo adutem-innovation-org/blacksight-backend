@@ -14,7 +14,11 @@ import {
   VerifyEmailDto,
 } from "@/decorators";
 import { UserTypes } from "@/enums";
-import { sendSuccessResponse, throwForbiddenError } from "@/helpers";
+import {
+  sendSuccessResponse,
+  throwBadRequestError,
+  throwForbiddenError,
+} from "@/helpers";
 import { AuthService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -107,6 +111,14 @@ export class AuthController {
 
   updateProfile = async (req: GenericReq<UpdateProfileDto>, res: Response) => {
     const data = await this.authService.updateProfile(req.authData!, req.body);
+    return sendSuccessResponse(res, data);
+  };
+
+  updateProfileImage = async (req: Request, res: Response) => {
+    if (!req.file) return throwBadRequestError("No file uploaded.");
+    const data = await this.authService.updateProfileImage(req.authData!, {
+      profileImage: req.file!,
+    });
     return sendSuccessResponse(res, data);
   };
 
