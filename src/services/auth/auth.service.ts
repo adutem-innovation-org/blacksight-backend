@@ -25,6 +25,8 @@ import {
   NotificationDto,
   GetUserPasswordDto,
   SetupPasswordDto,
+  UpdateAddressDto,
+  UpdateProfileDto,
 } from "@/decorators";
 import {
   throwBadRequestError,
@@ -531,6 +533,42 @@ export class AuthService {
     });
 
     return { message: "Password changed successfully" };
+  }
+
+  async updateAddress(auth: AuthData, body: UpdateAddressDto) {
+    const formattedData: Record<string, string> = {};
+
+    Object.keys(body).forEach(
+      (key) =>
+        (formattedData[`addressInfo.${key}`] =
+          body[key as keyof UpdateAddressDto])
+    );
+
+    let user: IUser | null = await this.userModel.findByIdAndUpdate(
+      auth.userId,
+      formattedData,
+      { new: true }
+    );
+
+    if (!user) return throwUnprocessableEntityError("User does not exist");
+
+    user = (await this.userModel.findById(auth.userId).select(GetUserAltDto))!;
+
+    return { user };
+  }
+
+  async updateProfile(auth: AuthData, body: UpdateProfileDto) {
+    let user: IUser | null = await this.userModel.findByIdAndUpdate(
+      auth.userId,
+      body,
+      { new: true }
+    );
+
+    if (!user) return throwUnprocessableEntityError("User does not exist");
+
+    user = (await this.userModel.findById(auth.userId).select(GetUserAltDto))!;
+
+    return { user };
   }
 
   async seedAdmin() {

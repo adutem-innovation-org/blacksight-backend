@@ -9,3 +9,5 @@ export * from "./save-push-token.dto";
 export * from "./create-account.dto";
 export * from "./notification.dto";
 export * from "./forgot-password";
+export * from "./update-address.dto";
+export * from "./update-profile.dto";

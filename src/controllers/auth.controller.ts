@@ -9,6 +9,8 @@ import {
   ResetPasswordDto,
   SavePushTokenDto,
   SetupPasswordDto,
+  UpdateAddressDto,
+  UpdateProfileDto,
   VerifyEmailDto,
 } from "@/decorators";
 import { UserTypes } from "@/enums";
@@ -95,6 +97,16 @@ export class AuthController {
     res: Response
   ) => {
     const data = await this.authService.resetPassword(req.body, UserTypes.USER);
+    return sendSuccessResponse(res, data);
+  };
+
+  updateAddress = async (req: GenericReq<UpdateAddressDto>, res: Response) => {
+    const data = await this.authService.updateAddress(req.authData!, req.body);
+    return sendSuccessResponse(res, data);
+  };
+
+  updateProfile = async (req: GenericReq<UpdateProfileDto>, res: Response) => {
+    const data = await this.authService.updateProfile(req.authData!, req.body);
     return sendSuccessResponse(res, data);
   };
 

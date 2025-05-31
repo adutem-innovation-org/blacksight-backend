@@ -6,11 +6,19 @@ import { BYTE_LENGTH } from "@/constants";
 import { randomUUID } from "crypto";
 const collectionName = "users";
 
+export interface IAddressInfo {
+  country?: string;
+  state?: string;
+  city?: string;
+  zipCode?: string;
+}
+
 export interface IUser extends Document<Types.ObjectId> {
   businessId: string;
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
   hash: string;
   salt: string;
   pushToken: string;
@@ -23,6 +31,7 @@ export interface IUser extends Document<Types.ObjectId> {
   imageUrl: string;
   isSuperAdmin: boolean;
   userType: UserTypes.ADMIN | UserTypes.USER | UserTypes.MERCHANT;
+  addressInfo: IAddressInfo;
   hasConnectedGoogleMeet: boolean;
   hasConnectedZoomMeet: boolean;
   hasConnectedMicrosoftTeams: boolean;
@@ -53,6 +62,9 @@ export const UserSchema: Schema<IUser> = new Schema(
       match: [emailRegex, "Invalid email"],
       trim: true,
       lowercase: true,
+    },
+    phone: {
+      type: String,
     },
     hash: {
       type: String,
@@ -100,6 +112,20 @@ export const UserSchema: Schema<IUser> = new Schema(
       enum: {
         values: Object.values(UserTypes),
         message: "Unsupported user type {{VALUE}}",
+      },
+    },
+    addressInfo: {
+      country: {
+        type: String,
+      },
+      state: {
+        type: String,
+      },
+      city: {
+        type: String,
+      },
+      zipCode: {
+        type: String,
       },
     },
     hasConnectedGoogleMeet: {

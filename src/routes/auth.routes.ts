@@ -17,6 +17,8 @@ import {
   NotificationDto,
   ChangePasswordDto,
   SetupPasswordDto,
+  UpdateProfileDto,
+  UpdateAddressDto,
 } from "@/decorators";
 import { AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -68,6 +70,22 @@ authRouter.patch(
   "/user/reset-password",
   validateDTO(ResetPasswordDto),
   authController.userResetPassword
+);
+
+authRouter.patch(
+  "/user/update-profile",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(UpdateProfileDto),
+  authController.updateProfile
+);
+
+authRouter.patch(
+  "/user/update-address",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(UpdateAddressDto),
+  authController.updateAddress
 );
 
 authRouter.get("/admin/seed", authController.seedAdmin);
