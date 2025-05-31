@@ -60,4 +60,20 @@ export class KnowledgeBaseController {
     );
     return sendSuccessResponse(res, data);
   };
+
+  activateKB = async (req: Request, res: Response) => {
+    const data = await this.knowledgeBaseService.activateKB(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  deactivateKB = async (req: Request, res: Response) => {
+    const data = await this.knowledgeBaseService.deactivateKB(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
 }

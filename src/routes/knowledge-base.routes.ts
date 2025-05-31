@@ -52,3 +52,10 @@ knowledgeBaseRouter.delete(
   permissionRequirement([UserTypes.USER]),
   knowledgeBaseController.deleteKnowledgeBase
 );
+
+knowledgeBaseRouter.patch("/activate/:id", knowledgeBaseController.activateKB);
+
+knowledgeBaseRouter.patch(
+  "/deactivate/:id",
+  knowledgeBaseController.deactivateKB
+);

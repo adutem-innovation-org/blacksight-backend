@@ -2,13 +2,15 @@ import { AddKnowledgeBaseDto } from "@/decorators";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
 import { IKnowledgeBase, KnowledgeBase } from "@/models";
-import { PaginationService } from "@/utils";
+import { eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 import fs from "fs";
 import path from "path";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import {
+  isOwnerUser,
+  isSuperAdmin,
   throwForbiddenError,
   throwNotFoundError,
   throwServerError,
@@ -17,13 +19,17 @@ import {
 import { Pinecone } from "@pinecone-database/pinecone";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { UserTypes } from "@/enums";
+import { Events, UserTypes } from "@/enums";
 import { Logger } from "winston";
+import EventEmitter2 from "eventemitter2";
 
 export class KnowledgeBaseService {
   private static instance: KnowledgeBaseService;
-  private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
   static logger: Logger = logger;
+  static readonly eventEmitter: EventEmitter2 = eventEmitter;
+
+  private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
+
   private readonly knowledgeBasePaginationService: PaginationService<IKnowledgeBase>;
   private readonly pinecone: Pinecone;
   private readonly openai: OpenAI;
@@ -246,5 +252,34 @@ export class KnowledgeBaseService {
     await pineconeIndex.deleteMany(idsToDelete);
 
     return { message: "Knowledge base deleted.", knowledgeBase };
+  }
+
+  async activateKB(auth: AuthData, id: string) {
+    const kb = await this.setKbStatus(auth, id, true);
+    return { knowledgeBase: kb, message: "Knowledgebase activated" };
+  }
+
+  async deactivateKB(auth: AuthData, id: string) {
+    const kb = await this.setKbStatus(auth, id, false);
+
+    // Deactivate any bot connected to this knowledge base
+    KnowledgeBaseService.eventEmitter.emit(Events.DEACTIVATE_BOTS_BY_KB_ID, {
+      auth,
+      knowledgeBaseId: id,
+    });
+
+    return { knowledgeBase: kb, message: "Knolwedgebase deactivated" };
+  }
+
+  async setKbStatus(auth: AuthData, id: string, status: boolean) {
+    const kb = await this.knowledgeBaseModel.findById(id);
+    if (!kb) return throwNotFoundError("Knowledgebase not found");
+    if (!isOwnerUser(auth, kb.businessId) && !isSuperAdmin(auth))
+      return throwForbiddenError("You are not allowed to access this resource");
+
+    kb.isActive = status;
+    await kb.save();
+
+    return kb;
   }
 }
