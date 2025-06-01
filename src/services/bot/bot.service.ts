@@ -325,44 +325,285 @@ export class BotService {
     return { data: newMessage, conversationId: conversation.conversationId };
   }
 
+  // async askChatbot(authData: AuthData, body: AskChatbotDto) {
+  //   const { userQuery, botId, conversationId } = body;
+
+  //   const businessId = authData.userId.toString();
+  //   let bot: IBot | null = await this.cacheService.get(botId);
+  //   if (!bot) {
+  //     bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
+  //   }
+
+  //   if (!bot)
+  //     return throwUnprocessableEntityError("Unconfigured bot referenced");
+
+  //   // ✅ Step 1: Construct the context for the AI to work with
+  //   // The context for now will be a combination of the conversation summary + other message + userQuery + bot instructions
+  //   // Get current conversation
+  //   let conversation = await this.conversationService.getOrCreateConversation(
+  //     conversationId,
+  //     botId,
+  //     businessId
+  //   );
+
+  //   // Save new message to it
+  //   conversation = await this.conversationService.saveUserMessage(
+  //     conversation,
+  //     userQuery
+  //   );
+
+  //   // Process the conversation (generate summary if needed)
+  //   let context = await this.conversationService.processConversation(
+  //     conversation
+  //   );
+
+  //   // Extract relevant knowledge base
+  //   let extractedKB = "";
+  //   try {
+  //     const documentId = bot.knowledgeBase.documentId.toString();
+  //     console.log("Document Id", documentId);
+  //     extractedKB = await this.knowledgeBaseService.queryKnowledgeBase(
+  //       businessId,
+  //       documentId,
+  //       userQuery
+  //     );
+  //   } catch (error) {
+  //     this.logger.error("Unable to extract knowledge base");
+  //     BotService.logJsonError(error);
+  //   }
+
+  //   // Get bot custom instructions
+  //   const customInstruction =
+  //     bot.instructions ?? "No custom instruction from the business.";
+
+  //   // ✅ Step 2: Detect message intent
+  //   const intent = await this.conversationService.detectUserIntent({
+  //     ...context,
+  //     customInstruction,
+  //     extractedKB,
+  //     userQuery,
+  //   });
+
+  //   // ✅ Step 3: Handle intents
+  //   switch (intent.intent) {
+  //     case Intent.BOOK_APPOINTMENT:
+  //       this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+  //         businessId,
+  //         conversationId,
+  //       });
+  //       break;
+  //     case Intent.SET_APPOINTMENT_DATE:
+  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+  //         param: AppointmentParam.DATE,
+  //         value: intent.parameters?.date,
+  //         businessId,
+  //         conversationId,
+  //       });
+  //       break;
+  //     case Intent.SET_APPOINTMENT_EMAIL:
+  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+  //         param: AppointmentParam.EMAIL,
+  //         value: intent.parameters?.email,
+  //         businessId,
+  //         conversationId,
+  //       });
+  //       break;
+  //     case Intent.SET_APPOINTMENT_TIME:
+  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+  //         param: AppointmentParam.TIME,
+  //         value: intent.parameters?.time,
+  //         businessId,
+  //         conversationId,
+  //       });
+  //     default:
+  //       break;
+  //   }
+
+  //   // let knowledgeText = "";
+  //   // const customInstructions =
+  //   //   bot.instructions ?? "No custom instruction from the business.";
+  //   // const documentId = bot.knowledgeBase.documentId.toString();
+
+  //   // if (intent.intent === Intent.UNKNOWN) {
+  //   //   if (documentId) {
+  //   //     // Retrieve the most relevant knowledge base chunks
+  //   //     try {
+  //   //       knowledgeText = await this.knowledgeBaseService.queryKnowledgeBase(
+  //   //         businessId,
+  //   //         documentId,
+  //   //         userQuery
+  //   //       );
+  //   //     } catch (error) {}
+  //   //   }
+  //   // }
+
+  //   // Structured prompt
+  //   // const developerPrompt = `
+  //   // You are a chatbot for a business.
+  //   // ${customInstructions}
+  //   // Use the following information to answer user queries:
+  //   // ${knowledgeText}
+
+  //   // Past conversation summary:
+  //   // ${context.summaries.join("\n")}
+
+  //   // Last action you carried out:
+  //   // ${intentActionsMapper[intent.intent]}
+  //   // `;
+
+  //   // Call OpenAI
+  //   // const openaiResponse = await this.openai.chat.completions.create({
+  //   //   model: "gpt-4",
+  //   //   messages: [
+  //   //     { role: "developer", content: developerPrompt },
+  //   //     ...context.unsummarizedMessages,
+  //   //   ],
+  //   // });
+
+  //   // const botResponse = {
+  //   //   role: RoleEnum.ASSISTANT,
+  //   //   content:
+  //   //     openaiResponse.choices[0].message.content ??
+  //   //     "I'm not sure I understood that. Could you please clarify",
+  //   // };
+  //   const botResponse = {
+  //     role: RoleEnum.ASSISTANT,
+  //     content: intent.message,
+  //   };
+
+  //   conversation.messages.push(botResponse);
+
+  //   await conversation.save();
+
+  //   return { data: botResponse };
+  // }
+
   async askChatbot(authData: AuthData, body: AskChatbotDto) {
     const { userQuery, botId, conversationId } = body;
-
     const businessId = authData.userId.toString();
+
+    // Get bot configuration
     let bot: IBot | null = await this.cacheService.get(botId);
     if (!bot) {
       bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
     }
-
-    if (!bot)
+    if (!bot) {
       return throwUnprocessableEntityError("Unconfigured bot referenced");
+    }
 
-    // ✅ Step 1: Construct the context for the AI to work with
-    // The context for now will be a combination of the conversation summary + other message + userQuery + bot instructions
-    // Get current conversation
+    // Get or create conversation
     let conversation = await this.conversationService.getOrCreateConversation(
       conversationId,
       botId,
       businessId
     );
 
-    // Save new message to it
+    // Process conversation with optimized context
+    const context = await this.conversationService.processConversationOptimized(
+      conversation
+    );
+
+    // Save user message
+    // ✅ This approach was reversed because we don't want to summarize the message the user just sent... Rather we want to summarize only past conversation if they are up to the required threshold
     conversation = await this.conversationService.saveUserMessage(
       conversation,
       userQuery
     );
 
-    // Process the conversation (generate summary if needed)
-    let context = await this.conversationService.processConversation(
-      conversation
-    );
+    // Extract knowledge base in parallel
+    const kbPromise = this.extractKnowledgeBase(bot, businessId, userQuery);
+    const extractedKB = await kbPromise;
 
-    // Extract relevant knowledge base
-    let extractedKB = "";
+    // Get custom instructions
+    const customInstruction =
+      bot.instructions ?? "No custom instruction from the business.";
+
+    // Detect intent with function calling
+    const intentResult =
+      await this.conversationService.detectUserIntentWithFunctions({
+        ...context,
+        customInstruction,
+        extractedKB,
+        userQuery,
+      });
+
+    // Handle function calls if present
+    if (intentResult.functionCalls && intentResult.functionCalls.length > 0) {
+      console.log("Function call detected");
+      console.log(intentResult.functionCalls);
+      await this.handleFunctionCalls(
+        intentResult.functionCalls,
+        businessId,
+        conversationId
+      );
+    }
+
+    // Handle cases where the function call is not called but that the intent is detected
+    if (
+      (!intentResult.functionCalls ||
+        intentResult?.functionCalls.length === 0) &&
+      intentResult.intent !== Intent.GENERAL_INQUIRY
+    ) {
+      switch (intentResult.intent) {
+        case Intent.BOOK_APPOINTMENT:
+          this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+            businessId,
+            conversationId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_DATE:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.DATE,
+            value: intentResult.parameters?.date,
+            businessId,
+            conversationId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_EMAIL:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.EMAIL,
+            value: intentResult.parameters?.email,
+            businessId,
+            conversationId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_TIME:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.TIME,
+            value: intentResult.parameters?.time,
+            businessId,
+            conversationId,
+          });
+        default:
+          break;
+      }
+    }
+
+    // Generate contextual response
+    const botResponse =
+      await this.conversationService.generateContextualResponse({
+        context,
+        extractedKB,
+        customInstruction,
+        intentResult,
+        userQuery,
+      });
+
+    // Save bot response
+    conversation.messages.push(botResponse);
+    await conversation.save();
+
+    return { data: botResponse };
+  }
+
+  private async extractKnowledgeBase(
+    bot: IBot,
+    businessId: string,
+    userQuery: string
+  ): Promise<string> {
     try {
       const documentId = bot.knowledgeBase.documentId.toString();
-      console.log("Document Id", documentId);
-      extractedKB = await this.knowledgeBaseService.queryKnowledgeBase(
+      return await this.knowledgeBaseService.queryKnowledgeBase(
         businessId,
         documentId,
         userQuery
@@ -370,112 +611,54 @@ export class BotService {
     } catch (error) {
       this.logger.error("Unable to extract knowledge base");
       BotService.logJsonError(error);
+      return "";
     }
+  }
 
-    // Get bot custom instructions
-    const customInstruction =
-      bot.instructions ?? "No custom instruction from the business.";
+  private async handleFunctionCalls(
+    functionCalls: any[],
+    businessId: string,
+    conversationId: string
+  ) {
+    for (const functionCall of functionCalls) {
+      const { name, arguments: args } = functionCall;
 
-    // ✅ Step 2: Detect message intent
-    const intent = await this.conversationService.detectUserIntent({
-      ...context,
-      customInstruction,
-      extractedKB,
-      userQuery,
-    });
+      switch (name) {
+        case "initiate_appointment_booking":
+          this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+            businessId,
+            conversationId,
+          });
+          break;
 
-    // ✅ Step 3: Handle intents
-    switch (intent.intent) {
-      case Intent.BOOK_APPOINTMENT:
-        this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
-          businessId,
-          conversationId,
-        });
-        break;
-      case Intent.SET_APPOINTMENT_DATE:
-        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-          param: AppointmentParam.DATE,
-          value: intent.parameters?.date,
-          businessId,
-          conversationId,
-        });
-        break;
-      case Intent.SET_APPOINTMENT_EMAIL:
-        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-          param: AppointmentParam.EMAIL,
-          value: intent.parameters?.email,
-          businessId,
-          conversationId,
-        });
-        break;
-      case Intent.SET_APPOINTMENT_TIME:
-        this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-          param: AppointmentParam.TIME,
-          value: intent.parameters?.time,
-          businessId,
-          conversationId,
-        });
-      default:
-        break;
+        case "collect_appointment_email":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.EMAIL,
+            value: JSON.parse(args).email,
+            businessId,
+            conversationId,
+          });
+          break;
+
+        case "set_appointment_date":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.DATE,
+            value: JSON.parse(args).date,
+            businessId,
+            conversationId,
+          });
+          break;
+
+        case "set_appointment_time":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.TIME,
+            value: JSON.parse(args).time,
+            businessId,
+            conversationId,
+          });
+          break;
+      }
     }
-
-    // let knowledgeText = "";
-    // const customInstructions =
-    //   bot.instructions ?? "No custom instruction from the business.";
-    // const documentId = bot.knowledgeBase.documentId.toString();
-
-    // if (intent.intent === Intent.UNKNOWN) {
-    //   if (documentId) {
-    //     // Retrieve the most relevant knowledge base chunks
-    //     try {
-    //       knowledgeText = await this.knowledgeBaseService.queryKnowledgeBase(
-    //         businessId,
-    //         documentId,
-    //         userQuery
-    //       );
-    //     } catch (error) {}
-    //   }
-    // }
-
-    // Structured prompt
-    // const developerPrompt = `
-    // You are a chatbot for a business.
-    // ${customInstructions}
-    // Use the following information to answer user queries:
-    // ${knowledgeText}
-
-    // Past conversation summary:
-    // ${context.summaries.join("\n")}
-
-    // Last action you carried out:
-    // ${intentActionsMapper[intent.intent]}
-    // `;
-
-    // Call OpenAI
-    // const openaiResponse = await this.openai.chat.completions.create({
-    //   model: "gpt-4",
-    //   messages: [
-    //     { role: "developer", content: developerPrompt },
-    //     ...context.unsummarizedMessages,
-    //   ],
-    // });
-
-    // const botResponse = {
-    //   role: RoleEnum.ASSISTANT,
-    //   content:
-    //     openaiResponse.choices[0].message.content ??
-    //     "I'm not sure I understood that. Could you please clarify",
-    // };
-    const botResponse = {
-      role: RoleEnum.ASSISTANT,
-      content: intent.message,
-    };
-
-    conversation.messages.push(botResponse);
-
-    await conversation.save();
-
-    return { data: botResponse };
   }
 
   async getTrainingConversation(auth: AuthData, botId: string) {
