@@ -11,6 +11,7 @@ import {
   ConfigureBotDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
+  TranscribeChatAudioDto,
 } from "@/decorators";
 import {
   isOwner,
@@ -33,7 +34,12 @@ import {
   KnowledgeBase,
   MeetingProvider,
 } from "@/models";
-import { CacheService, eventEmitter, PaginationService } from "@/utils";
+import {
+  AudioConverter,
+  CacheService,
+  eventEmitter,
+  PaginationService,
+} from "@/utils";
 import { Model, Types } from "mongoose";
 import { KnowledgeBaseService } from "../knowledge-base";
 import { ConversationService } from "./conversation.service";
@@ -43,6 +49,9 @@ import { intentActionsMapper } from "@/constants";
 import EventEmitter2 from "eventemitter2";
 import { Logger } from "winston";
 import { logger } from "@/logging";
+import fs from "fs";
+import path from "path";
+import ffmpeg from "fluent-ffmpeg";
 
 export class BotService {
   private static instance: BotService;
@@ -50,7 +59,7 @@ export class BotService {
   // Helpers
   private readonly eventEmitter: EventEmitter2 = eventEmitter;
   private static readonly logJsonError = logJsonError;
-  private readonly logger: Logger = logger;
+  private static readonly logger: Logger = logger;
 
   // Models
   private readonly botModel: Model<IBot> = Bot;
@@ -64,12 +73,14 @@ export class BotService {
   private readonly knowledgeBaseService: KnowledgeBaseService;
   private readonly conversationService: ConversationService;
   private readonly cacheService: CacheService;
+  private readonly openai: OpenAI;
 
   constructor() {
     this.botPaginationService = new PaginationService(this.botModel);
     this.knowledgeBaseService = KnowledgeBaseService.getInstace();
     this.conversationService = ConversationService.getInstance();
     this.cacheService = CacheService.getInstance();
+    this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
 
   static getInstance() {
@@ -368,7 +379,7 @@ export class BotService {
   //       userQuery
   //     );
   //   } catch (error) {
-  //     this.logger.error("Unable to extract knowledge base");
+  //     BotService.logger.error("Unable to extract knowledge base");
   //     BotService.logJsonError(error);
   //   }
 
@@ -609,7 +620,7 @@ export class BotService {
         userQuery
       );
     } catch (error) {
-      this.logger.error("Unable to extract knowledge base");
+      BotService.logger.error("Unable to extract knowledge base");
       BotService.logJsonError(error);
       return "";
     }
@@ -699,5 +710,64 @@ export class BotService {
     );
     if (!conversation) return throwNotFoundError("Conversation not found");
     return { message: "Training conversation deleted", conversation };
+  }
+
+  async speechToText(
+    authData: AuthData,
+    audioFile: Express.Multer.File,
+    body: TranscribeChatAudioDto
+  ) {
+    const { botId } = body;
+
+    // Get bot configuration
+    let bot: IBot | null = await this.cacheService.get(botId);
+    if (!bot) {
+      bot = await this.botModel.findOne({
+        _id: new Types.ObjectId(botId),
+        businessId: new Types.ObjectId(authData.userId),
+      });
+    }
+    if (!bot) {
+      return throwUnprocessableEntityError("Unconfigured bot referenced");
+    }
+
+    const filePath = audioFile.path;
+    const convertedPath = path.join(
+      path.dirname(filePath),
+      `${path.parse(filePath).name}.mp3`
+    );
+
+    try {
+      // Convert the file from .webm to .mp3
+      try {
+        await AudioConverter.convertToMp3(filePath, convertedPath);
+        BotService.logger.info("Speech file successfully converted");
+      } catch (error) {
+        BotService.logger.error("Unable to convert speech file");
+        BotService.logJsonError(error);
+      }
+
+      const transcription = await this.openai.audio.transcriptions.create({
+        file: fs.createReadStream(convertedPath),
+        model: "whisper-1",
+      });
+
+      return { text: transcription.text };
+    } catch (error) {
+      BotService.logJsonError(error);
+      return throwUnprocessableEntityError("Unable to transcribe audio");
+    } finally {
+      try {
+        await fs.promises.unlink(audioFile.path);
+      } catch (err: any) {
+        console.warn("File deletion failed or already removed:", err.message);
+      }
+
+      try {
+        await fs.promises.unlink(convertedPath);
+      } catch (err: any) {
+        console.warn("Converted file deletion failed:", err.message);
+      }
+    }
   }
 }

@@ -2,10 +2,11 @@ import {
   AskChatbotDto,
   ConfigureBotDto,
   StartConversationDto,
+  TranscribeChatAudioDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
 } from "@/decorators";
-import { sendSuccessResponse } from "@/helpers";
+import { sendSuccessResponse, throwUnprocessableEntityError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { BotService } from "@/services/bot";
 import { Request, Response } from "express";
@@ -125,6 +126,20 @@ export class BotController {
       req.authData!,
       req.params.botId,
       req.params.conversationId
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  speechToText = async (
+    req: GenericReq<TranscribeChatAudioDto>,
+    res: Response
+  ) => {
+    if (!req.file)
+      return throwUnprocessableEntityError("Unable to transcribe audio.");
+    const data = await this.botService.speechToText(
+      req.authData!,
+      req.file,
+      req.body
     );
     return sendSuccessResponse(res, data);
   };

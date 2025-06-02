@@ -1,8 +1,10 @@
+import { WHISPERAI_AUDIO_MIMETYPES } from "@/constants";
 import { BotController } from "@/controllers";
 import {
   AskChatbotDto,
   ConfigureBotDto,
   StartConversationDto,
+  TranscribeChatAudioDto,
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
 } from "@/decorators";
@@ -10,6 +12,7 @@ import { UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
   permissionRequirement,
+  uploadSingleFile,
   validateDTO,
   validateToken,
 } from "@/middlewares";
@@ -85,4 +88,18 @@ botRouter.get(
 botRouter.delete(
   "/conversation/training/:botId/:conversationId",
   botController.clearTrainingConversation
+);
+
+botRouter.post(
+  "/conversation/training/speech-to-text",
+  uploadSingleFile({
+    name: "speech-file",
+    mimeTypes: WHISPERAI_AUDIO_MIMETYPES,
+    required: true,
+    configs: {
+      dest: "uploads/",
+    },
+  }),
+  validateDTO(TranscribeChatAudioDto),
+  botController.speechToText
 );

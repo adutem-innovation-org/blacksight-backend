@@ -721,6 +721,13 @@
     "@types/qs" "*"
     "@types/serve-static" "*"
 
+"@types/fluent-ffmpeg@^2.1.27":
+  version "2.1.27"
+  resolved "https://registry.yarnpkg.com/@types/fluent-ffmpeg/-/fluent-ffmpeg-2.1.27.tgz#c4eac6fbda30bb6316d2220c8faf54f48db0812d"
+  integrity sha512-QiDWjihpUhriISNoBi2hJBRUUmoj/BMTYcfz+F+ZM9hHWBYABFAE6hjP/TbCZC0GWwlpa3FzvHH9RzFeRusZ7A==
+  dependencies:
+    "@types/node" "*"
+
 "@types/html-to-text@*":
   version "9.0.4"
   resolved "https://registry.yarnpkg.com/@types/html-to-text/-/html-to-text-9.0.4.tgz#4a83dd8ae8bfa91457d0b1ffc26f4d0537eff58c"
@@ -1012,6 +1019,11 @@ assert-never@^1.2.1:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/assert-never/-/assert-never-1.4.0.tgz#b0d4988628c87f35eb94716cc54422a63927e175"
   integrity sha512-5oJg84os6NMQNl27T9LnZkvvqzvAnHu03ShCnoj6bsJwS7L8AO4lf+C/XjK/nvzEqQB744moC6V128RucQd1jA==
+
+async@^0.2.9:
+  version "0.2.10"
+  resolved "https://registry.yarnpkg.com/async/-/async-0.2.10.tgz#b6bbe0b0674b9d719708ca38de8c237cb526c3d1"
+  integrity sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ==
 
 async@^3.2.3:
   version "3.2.6"
@@ -1940,6 +1952,14 @@ fixpack@^4.0.0:
     detect-newline "^3.1.0"
     extend-object "^1.0.0"
     rc "^1.2.8"
+
+fluent-ffmpeg@^2.1.3:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/fluent-ffmpeg/-/fluent-ffmpeg-2.1.3.tgz#d6846be257777844249a4adeb320f25326d239f3"
+  integrity sha512-Be3narBNt2s6bsaqP6Jzq91heDgOEaDCJAXcE3qcma/EJBSy5FB4cvO31XBInuAuKBx8Kptf8dkhjK0IOru39Q==
+  dependencies:
+    async "^0.2.9"
+    which "^1.1.1"
 
 fn.name@1.x.x:
   version "1.1.0"
@@ -3967,7 +3987,7 @@ whatwg-url@^5.0.0:
     tr46 "~0.0.3"
     webidl-conversions "^3.0.0"
 
-which@^1.2.9:
+which@^1.1.1, which@^1.2.9:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/which/-/which-1.3.1.tgz#a45043d54f5805316da8d62f9f50918d3da70b0a"
   integrity sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==

@@ -4,3 +4,4 @@ export * from "./mail";
 export * from "./event";
 export * from "./pagination";
 export * from "./storage";
+export * from "./media";

@@ -11,6 +11,16 @@ export const VIDEO_AUDIO_MIMETYPES = [
   "video/x-matroska",
 ];
 
+export const WHISPERAI_AUDIO_MIMETYPES = [
+  "audio/mpeg",
+  "audio/wav",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/mpga",
+  "audio/m4a",
+  "audio/webm",
+];
+
 export const IMAGE_MIMETYPES = [
   "image/jpeg",
   "image/png",
