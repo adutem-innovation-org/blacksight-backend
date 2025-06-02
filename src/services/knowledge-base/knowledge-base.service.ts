@@ -1,3 +1,4 @@
+import { BotSharedService } from "./../bot/bot-shared.service";
 import { AddKnowledgeBaseDto } from "@/decorators";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
@@ -27,20 +28,20 @@ import EventEmitter2 from "eventemitter2";
 export class KnowledgeBaseService {
   private static instance: KnowledgeBaseService;
   static logger: Logger = logger;
-  private static readonly logJsonError = logJsonError;
   static readonly eventEmitter: EventEmitter2 = eventEmitter;
 
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
-  private readonly botModel: Model<IBot> = Bot;
 
   private readonly knowledgeBasePaginationService: PaginationService<IKnowledgeBase>;
   private readonly pinecone: Pinecone;
   private readonly openai: OpenAI;
+  private readonly botSharedService: BotSharedService;
 
   constructor() {
     this.knowledgeBasePaginationService = new PaginationService(
       this.knowledgeBaseModel
     );
+    this.botSharedService = BotSharedService.getInstance();
     this.pinecone = new Pinecone({
       apiKey: config.pinecone.apiKey,
       maxRetries: 5,
@@ -255,7 +256,7 @@ export class KnowledgeBaseService {
     await pineconeIndex.deleteMany(idsToDelete);
 
     // Deactivate any bot connected to this knowledge base
-    await this.deactivateBotsByKbId(auth, id);
+    await this.botSharedService.deactivateBotsByKbId(auth, id);
 
     return { message: "Knowledge base deleted.", knowledgeBase };
   }
@@ -269,7 +270,7 @@ export class KnowledgeBaseService {
     const kb = await this.setKbStatus(auth, id, false);
 
     // Deactivate any bot connected to this knowledge base
-    await this.deactivateBotsByKbId(auth, id);
+    await this.botSharedService.deactivateBotsByKbId(auth, id);
 
     return { knowledgeBase: kb, message: "Knolwedgebase deactivated" };
   }
@@ -284,34 +285,5 @@ export class KnowledgeBaseService {
     await kb.save();
 
     return kb;
-  }
-
-  /**
-   * This service method deactivates bot that are associated to a particular knowledgebase.
-   * @param auth The current authenticated entity that issued this action
-   * @param knowledgeBaseId The mongodb identifier of the knowledge base to be deleted
-   */
-  async deactivateBotsByKbId(auth: AuthData, knowledgeBaseId: string) {
-    try {
-      const allAssociatedBots = await this.botModel.find({
-        knowledgeBaseId: new Types.ObjectId(knowledgeBaseId),
-      });
-
-      if (allAssociatedBots.length === 0) return;
-
-      const botDeactivationPromises = allAssociatedBots
-        .filter(
-          (bot) => isOwnerUser(auth, bot.businessId) || isSuperAdmin(auth)
-        )
-        .map(async (bot) => {
-          bot.status = BotStatus.INACTIVE;
-          bot.isActive = false;
-          await bot.save();
-        });
-
-      await Promise.allSettled(botDeactivationPromises);
-    } catch (error) {
-      KnowledgeBaseService.logJsonError(error);
-    }
   }
 }
