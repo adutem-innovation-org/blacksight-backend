@@ -52,6 +52,7 @@ import { logger } from "@/logging";
 import fs from "fs";
 import path from "path";
 import ffmpeg from "fluent-ffmpeg";
+import { AppointmentService } from "../appointment";
 
 export class BotService {
   private static instance: BotService;
@@ -72,6 +73,7 @@ export class BotService {
   private readonly botPaginationService: PaginationService<IBot>;
   private readonly knowledgeBaseService: KnowledgeBaseService;
   private readonly conversationService: ConversationService;
+  private readonly appointmentService: AppointmentService;
   private readonly cacheService: CacheService;
   private readonly openai: OpenAI;
 
@@ -79,6 +81,7 @@ export class BotService {
     this.botPaginationService = new PaginationService(this.botModel);
     this.knowledgeBaseService = KnowledgeBaseService.getInstace();
     this.conversationService = ConversationService.getInstance();
+    this.appointmentService = AppointmentService.getInstance();
     this.cacheService = CacheService.getInstance();
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
@@ -509,6 +512,17 @@ export class BotService {
       businessId
     );
 
+    // Get the appointment data
+    const result = await this.appointmentService.getConversationAppointment(
+      conversationId
+    );
+    const currentAppointmentData =
+      result?.isRecent && result.appointment
+        ? `Current appointment data collected: ${JSON.stringify(
+            result.appointment
+          )}`
+        : "Current appointment data collected: None";
+
     // Process conversation with optimized context
     const context = await this.conversationService.processConversationOptimized(
       conversation
@@ -536,7 +550,10 @@ export class BotService {
         customInstruction,
         extractedKB,
         userQuery,
+        currentAppointmentData,
       });
+
+    console.log(intentResult);
 
     // Handle function calls if present
     if (intentResult.functionCalls && intentResult.functionCalls.length > 0) {
@@ -560,20 +577,21 @@ export class BotService {
           this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
-          });
-          break;
-        case Intent.SET_APPOINTMENT_DATE:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-            param: AppointmentParam.DATE,
-            value: intentResult.parameters?.date,
-            businessId,
-            conversationId,
+            values: intentResult.parameters || {},
           });
           break;
         case Intent.SET_APPOINTMENT_EMAIL:
           this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.EMAIL,
             value: intentResult.parameters?.email,
+            businessId,
+            conversationId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_DATE:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.DATE,
+            value: intentResult.parameters?.date,
             businessId,
             conversationId,
           });
@@ -585,6 +603,15 @@ export class BotService {
             businessId,
             conversationId,
           });
+          break;
+        case Intent.SET_APPOINTMENT_DATE_AND_TIME:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.DATE_TIME,
+            values: intentResult.parameters,
+            businessId,
+            conversationId,
+          });
+          break;
         default:
           break;
       }
@@ -664,6 +691,15 @@ export class BotService {
           this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.TIME,
             value: JSON.parse(args).time,
+            businessId,
+            conversationId,
+          });
+          break;
+
+        case "set_appointment_date_and_time":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.DATE_TIME,
+            value: JSON.parse(args),
             businessId,
             conversationId,
           });

@@ -13,7 +13,14 @@ import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
 import { Appointment, IAppointment } from "@/models";
 import { eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
-import { startOfDay, subDays, format, endOfDay } from "date-fns";
+import {
+  startOfDay,
+  subDays,
+  format,
+  endOfDay,
+  parseISO,
+  differenceInMilliseconds,
+} from "date-fns";
 import EventEmitter2 from "eventemitter2";
 import { Logger } from "winston";
 import { logger } from "@/logging";
@@ -75,6 +82,14 @@ export class AppointmentService {
           break;
         case AppointmentParam.EMAIL:
           valueToSet["customerEmail"] = value;
+          break;
+        case AppointmentParam.DATE_TIME:
+          if (value.date) {
+            valueToSet["appointmentDate"] = value.date;
+          }
+          if (value.time) {
+            valueToSet["appointmentTime"] = value.time;
+          }
           break;
         default:
           break;
@@ -178,7 +193,23 @@ export class AppointmentService {
   private async _initAppointment(payload: {
     businessId: string;
     conversationId: string;
+    values: Record<string, any>;
   }) {
+    let valuesToSet: Record<string, any> = {};
+    const values = payload.values;
+
+    if (values.email) {
+      valuesToSet["customerEmail"] = values.email;
+    }
+
+    if (values.date) {
+      valuesToSet["appointmentDate"] = values.date;
+    }
+
+    if (values.time) {
+      valuesToSet["appointmentTime"] = values.time;
+    }
+
     try {
       await this.appointmentModel.findOneAndUpdate(
         {
@@ -188,6 +219,7 @@ export class AppointmentService {
         {
           businessId: payload.businessId,
           conversationId: payload.conversationId,
+          ...valuesToSet,
         },
         { upsert: true }
       );
@@ -267,6 +299,27 @@ export class AppointmentService {
     )
       return throwForbiddenError("You are not allowed to access this resource");
     return { appointment };
+  }
+
+  async getConversationAppointment(conversationId: string) {
+    try {
+      const appointment = await this.appointmentModel.findOne({
+        conversationId,
+      });
+      if (!appointment) return null;
+      const isRecent = this._isWithinLast(
+        appointment?.createdAt,
+        2 * 60 * 60 * 1000
+      ); // 2 hourse
+      return { appointment, isRecent };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  _isWithinLast(date: string | Date, durationMs: number): boolean {
+    const parsedDate = typeof date === "string" ? parseISO(date) : date;
+    return differenceInMilliseconds(new Date(), parsedDate) <= durationMs;
   }
 
   async deleteAppointment(auth: AuthData, id: string) {

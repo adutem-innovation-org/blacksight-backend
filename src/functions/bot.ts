@@ -33,6 +33,7 @@ export const appointmentFunctions = [
         date: {
           type: "string",
           description: "Appointment date in YYYY-MM-DD format",
+          format: "date",
         },
       },
       required: ["date"],
@@ -47,10 +48,32 @@ export const appointmentFunctions = [
       properties: {
         time: {
           type: "string",
-          description: "Appointment time in HH:MM format",
+          description: "Appointment time in HH:MM format (24 hours)",
+          format: "time",
         },
       },
       required: ["time"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_appointment_date_and_time",
+    description: "Set the appointment date and time",
+    parameters: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "Appointment date in YYYY-MM-DD format",
+          format: "date",
+        },
+        time: {
+          type: "string",
+          description: "Appointment time in HH:MM format (24-hours)",
+          format: "time",
+        },
+      },
+      required: ["date", "time"],
       additionalProperties: false,
     },
   },

@@ -268,17 +268,23 @@ export class ConversationService {
     userQuery,
     extractedKB,
     customInstruction,
+    currentAppointmentData,
   }: {
     summaries: string[];
     unsummarizedMessages: IMessage[];
     userQuery: string;
     extractedKB: string;
     customInstruction: string;
+    currentAppointmentData: string;
   }) {
+    const currentDate = new Date().toISOString().split("T")[0];
+
     const developerPrompt = this.createEnhancedIntentPrompt(
       summaries,
       extractedKB,
-      customInstruction
+      customInstruction,
+      currentDate,
+      currentAppointmentData
     );
 
     const messages = [
@@ -286,6 +292,12 @@ export class ConversationService {
       ...unsummarizedMessages,
       { role: RoleEnum.USER, content: userQuery },
     ];
+
+    // This snippet of code ensure that appointment dates are resolved based on the current date.
+    messages.unshift({
+      role: RoleEnum.SYSTEM,
+      content: `Today's date is ${currentDate}. Always resolve relative dates like "next week" based on this.`,
+    });
 
     try {
       const openaiResponse = await this.openai.chat.completions.create({
@@ -446,7 +458,9 @@ export class ConversationService {
   createEnhancedIntentPrompt(
     summaries: string[],
     extractedKB: string,
-    customInstruction: string
+    customInstruction: string,
+    currentDate: string,
+    currentAppointmentData: string
   ) {
     return `
     You are an advanced intent detection and response assistant for a business chatbot.
@@ -456,7 +470,17 @@ export class ConversationService {
     - SET_APPOINTMENT_EMAIL: User provides email for appointment (PRIORITY - collect this first)
     - SET_APPOINTMENT_DATE: User provides or wants to set appointment date
     - SET_APPOINTMENT_TIME: User provides or wants to set appointment time  
+    - SET_APPOINTMENT_DATE_AND_TIME: User provides or wants to set both date and time in one message
     - GENERAL_INQUIRY: General questions, information requests, or other business-related queries
+    - END_CONVERSATION: If the user says things like "no further inquiry", "that's all", or "I'm done", "nothing else", "that will be all for now", "thank you for your time". 
+
+    FUNCTION CALLING REQUIREMENTS:
+    1. When the user provides email, date, and time (either gradually or via SET_APPOINTMENT_DATE_AND_TIME), emit all three related function calls:
+      set_appointment_email
+      set_appointment_date
+      set_appointment_time
+    This is required even if some values were already set earlier, for reinforcement and consistency.
+    Emit these function calls at the end of the appointment flow or during SET_APPOINTMENT_DATE_AND_TIME. 
 
     APPOINTMENT BOOKING FLOW:
     1. First collect EMAIL (most important)
@@ -471,13 +495,17 @@ export class ConversationService {
 
     Conversation History: ${summaries.join("\n")}
 
+    ${currentAppointmentData}
+
     RESPONSE REQUIREMENTS:
     1. Always return valid JSON in the specified schema
     2. Provide natural, helpful messages
     3. Use knowledge base information when relevant
     4. For appointments, follow the email → date → time sequence
-    5. Be conversational and professional
-    6. Extract parameters accurately (email format, date as YYYY-MM-DD, time as HH:MM)
+    5. Confirm appointment once email, date, and time are all collected — either together or in separate steps.
+    6. Be conversational and professional
+    7. Extract parameters accurately (email format, date as YYYY-MM-DD, time as HH:MM)
+    8. Treat relative dates like "next Friday", "tomorrow", "next tomorrow" relative to the current date: ${currentDate}
 
     Your response must be valid JSON with "intent", "message", and optional "parameters" fields.`;
   }

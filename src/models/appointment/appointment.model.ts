@@ -52,6 +52,7 @@ const AppointmentSchema = new Schema<IAppointment>(
 
 // Virtual to combine date and time into one Date object
 AppointmentSchema.virtual("dateTime").get(function () {
+  if (!this.appointmentDate || !this.appointmentTime) return null;
   const date = new Date(this.appointmentDate.toString());
   const time = new Date(this.appointmentTime.toString());
   if (date && time) {

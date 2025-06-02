@@ -10,6 +10,7 @@ export const intentDetectionSchema = {
         "SET_APPOINTMENT_DATE",
         "SET_APPOINTMENT_TIME",
         "GENERAL_INQUIRY",
+        "END_CONVERSATION",
       ],
     },
     parameters: {
