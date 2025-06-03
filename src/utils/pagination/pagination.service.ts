@@ -67,7 +67,7 @@ export default class PaginationService<T> {
         .limit(pp)
         .sort(sort)
         .populate(populate)
-        .lean()
+        .lean({ virtuals: true })
         .exec(),
     ]);
 
