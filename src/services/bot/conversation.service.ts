@@ -1,14 +1,21 @@
 import { config } from "@/config";
 import { intentActionsMapper } from "@/constants";
-import { Intent, IntentResult, RoleEnum } from "@/enums";
+import { Intent, RoleEnum, UserTypes } from "@/enums";
 import { appointmentFunctions } from "@/functions";
 import { logJsonError } from "@/helpers";
+import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
-import { Conversation, IConversation, IMessage } from "@/models";
+import {
+  Appointment,
+  Conversation,
+  IAppointment,
+  IConversation,
+  IMessage,
+} from "@/models";
 import { intentDetectionSchema } from "@/schema";
-import { CacheService } from "@/utils";
+import { CacheService, PaginationService } from "@/utils";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import OpenAI from "openai";
 import { v4 as uuid_v4 } from "uuid";
 import { Logger } from "winston";
@@ -21,12 +28,16 @@ export class ConversationService {
   // private readonly SUMMARY_TRIGGER_THRESHOLD = 10;
   private readonly SUMMARY_TRIGGER_THRESHOLD = 12;
   private readonly MAX_UNSUMMARIZED_MESSAGES = 15;
+
+  // Models
+  private readonly appointmentModel: Model<IAppointment> = Appointment;
   private readonly conversationModel: Model<IConversation> = Conversation;
 
   private readonly pinecone: Pinecone;
   private readonly openai: OpenAI;
 
   private readonly cacheService: CacheService;
+  private readonly paginationService: PaginationService<IConversation>;
 
   constructor() {
     this.pinecone = new Pinecone({
@@ -35,6 +46,7 @@ export class ConversationService {
     });
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
     this.cacheService = CacheService.getInstance();
+    this.paginationService = new PaginationService(this.conversationModel);
   }
 
   static getInstance() {
@@ -42,6 +54,44 @@ export class ConversationService {
       this.instance = new ConversationService();
     }
     return this.instance;
+  }
+
+  async analytics(auth: AuthData) {
+    let query: Record<string, any> = {};
+    if (auth.userType === UserTypes.USER) {
+      query = { businessId: new Types.ObjectId(auth.userId) };
+    }
+
+    // Get distinct conversationIds from appointments
+    const conversationIds = await this.appointmentModel.distinct(
+      "conversationId",
+      query
+    );
+
+    const result = await Promise.allSettled([
+      this.conversationModel.countDocuments(query),
+      this.conversationModel.countDocuments({
+        conversationId: { $in: conversationIds },
+        ...query,
+      }),
+    ]);
+
+    return {
+      data: {
+        totalConversations:
+          result[0].status === "fulfilled" ? result[0].value : 0,
+        totalConversationsWithAppointment:
+          result[1].status === "fulfilled" ? result[1].value : 0,
+      },
+    };
+  }
+
+  async getAllConversations(auth: AuthData) {
+    let query: Record<string, any> = {};
+    if (auth.userType === UserTypes.USER) {
+      query.businessId = new Types.ObjectId(auth.userId);
+    }
+    return await this.paginationService.paginate({ query }, ["-createdAt"]);
   }
 
   async getOrCreateConversation(

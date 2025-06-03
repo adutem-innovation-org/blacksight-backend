@@ -30,10 +30,18 @@ botRouter.patch(
 
 botRouter.get("/analytics", botController.botAnalytics);
 
+botRouter.get("/conversation/analytics", botController.conversationAnalytics);
+
 botRouter.get(
   "/all",
   permissionRequirement([UserTypes.USER, UserTypes.ADMIN]),
   botController.getBots
+);
+
+botRouter.get(
+  "/conversation/all",
+  permissionRequirement([UserTypes.USER, UserTypes.ADMIN]),
+  botController.getAllConversations
 );
 
 botRouter.post(

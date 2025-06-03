@@ -1,9 +1,12 @@
 import { ConversationMode, RoleEnum } from "@/enums";
+import { formatDuration, intervalToDuration } from "date-fns";
 import { Document, Types, Schema, model, Model } from "mongoose";
+import mongooseLeanVirtuals from "mongoose-lean-virtuals";
 const collectionName = "conversations";
 export interface IMessage {
   role: RoleEnum;
   content: string;
+  createdAt?: Date;
 }
 
 interface ISummary {
@@ -16,6 +19,7 @@ export interface IConversation extends Document<Types.ObjectId> {
   conversationId: string;
   botId: Types.ObjectId;
   mode: ConversationMode;
+  duration?: string; // Virtual field
   messages: IMessage[];
   summaries: ISummary[];
 }
@@ -96,6 +100,35 @@ const ConversationSchema: Schema<IConversation> = new Schema<IConversation>(
     toObject: { virtuals: true },
   }
 );
+
+ConversationSchema.virtual("duration").get(function (this: IConversation) {
+  if (!this.messages || this.messages.length < 2) return "0s";
+
+  const first = this.messages[0]?.createdAt;
+  const last = this.messages[this.messages.length - 1]?.createdAt;
+
+  if (!first || !last) return "0s";
+
+  const { hours, minutes, seconds } = intervalToDuration({
+    start: first,
+    end: last,
+  });
+
+  const parts = [];
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+  if (seconds || parts.length === 0) parts.push(`${seconds ?? 0}s`);
+
+  return parts.join(" ");
+
+  //   return (
+  //   formatDuration(duration, { format: ["hours", "minutes", "seconds"] }) ||
+  //   "0s"
+  // );
+});
+
+// Schema lean virtual plugins to populate virtauls even in lean mode (Pagination Service)
+ConversationSchema.plugin(mongooseLeanVirtuals);
 
 export const Conversation: Model<IConversation> = model<IConversation>(
   collectionName,

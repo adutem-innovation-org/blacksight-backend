@@ -8,16 +8,18 @@ import {
 } from "@/decorators";
 import { sendSuccessResponse, throwUnprocessableEntityError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
-import { BotService } from "@/services/bot";
+import { BotService, ConversationService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 export class BotController {
   private static instance: BotController;
   private readonly botService: BotService;
+  private readonly conversationService: ConversationService;
 
   constructor() {
     this.botService = BotService.getInstance();
+    this.conversationService = ConversationService.getInstance();
   }
 
   static getInstance() {
@@ -37,8 +39,20 @@ export class BotController {
     return sendSuccessResponse(res, data);
   };
 
+  conversationAnalytics = async (req: Request, res: Response) => {
+    const data = await this.conversationService.analytics(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
   getBots = async (req: Request, res: Response) => {
     const data = await this.botService.getAllBots(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
+  getAllConversations = async (req: Request, res: Response) => {
+    const data = await this.conversationService.getAllConversations(
+      req.authData!
+    );
     return sendSuccessResponse(res, data);
   };
 
