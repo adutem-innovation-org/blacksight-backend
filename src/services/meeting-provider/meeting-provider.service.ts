@@ -1,11 +1,24 @@
 import { MeetingProvidersEnum } from "@/enums";
 import { AuthData } from "@/interfaces";
-import { MeetingProvider, IMeetingProvider, IUser, User } from "@/models";
+import {
+  MeetingProvider,
+  IMeetingProvider,
+  IUser,
+  User,
+  IAppointment,
+} from "@/models";
 import { Model, Types } from "mongoose";
 import { GoogleCalenderService } from "./providers";
+import { refreshTokenIfNeeded, throwUnprocessableEntityError } from "@/helpers";
+import { google } from "googleapis";
+import { Logger } from "winston";
+import { logger } from "@/logging";
+import { v4 as uuidv4 } from "uuid";
 
 export class MeetingProviderService {
   private static instance: MeetingProviderService;
+  private static logger: Logger = logger;
+
   private readonly meetingProviderModel: Model<IMeetingProvider> =
     MeetingProvider;
   private readonly userModel: Model<IUser> = User;
@@ -55,6 +68,12 @@ export class MeetingProviderService {
             window.close()
         </script>`;
 
+    let tokenPayload;
+    if (tokens.id_token)
+      tokenPayload = await this.googleCalenderService.fetchTokenInfo(
+        tokens.id_token
+      );
+
     await this.meetingProviderModel.findOneAndUpdate(
       {
         userId: new Types.ObjectId(userId),
@@ -63,10 +82,11 @@ export class MeetingProviderService {
       {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
+        idToken: tokens.id_token,
+        sub: tokenPayload?.sub,
         expiryDate: new Date(
           tokens.expiry_date ?? this.getSevenDaysFromNow()
         ).getTime(),
-        userId,
         provider: MeetingProvidersEnum.GOOGLE,
       },
       { upsert: true }
@@ -82,6 +102,66 @@ export class MeetingProviderService {
             window.close()
         </script>
         `;
+  }
+
+  async scheduleGoogleMeeting({
+    provider,
+    customerEmail,
+    startTime,
+    endTime,
+    summary,
+    timeZone = "America/Los_Angeles",
+  }: {
+    provider: IMeetingProvider;
+    customerEmail: string;
+    startTime: string;
+    endTime: string;
+    summary: string;
+    timeZone?: string;
+  }) {
+    const oauthClient = this.googleCalenderService.getOauthClient();
+
+    const accessToken = await refreshTokenIfNeeded(provider);
+
+    oauthClient.setCredentials({
+      access_token: accessToken,
+      refresh_token: provider.refreshToken,
+      expiry_date: new Date(provider.expiryDate).getTime(),
+    });
+
+    const calendar = google.calendar({ version: "v3", auth: oauthClient });
+
+    const result = await calendar.events.insert({
+      calendarId: "primary",
+      conferenceDataVersion: 1,
+      sendUpdates: "all",
+      sendNotifications: true,
+      requestBody: {
+        summary,
+        attendees: [{ email: customerEmail }],
+        start: {
+          dateTime: startTime,
+          timeZone,
+        },
+        end: {
+          dateTime: endTime,
+          timeZone,
+        },
+        conferenceData: {
+          createRequest: {
+            requestId: uuidv4(), // must be unique per request
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        },
+      },
+    });
+
+    return {
+      meetingLink: result.data.conferenceData?.entryPoints?.[0]?.uri,
+      metadata: result.data as any,
+    };
+
+    MeetingProviderService.logger.info("Google meet event scheduled.");
   }
 
   async disconnectGoogle(auth: AuthData) {

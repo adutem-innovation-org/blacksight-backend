@@ -577,6 +577,8 @@ export class BotService {
           this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
+            botId,
+            providerId: bot?.meetingProviderId,
             values: intentResult.parameters || {},
           });
           break;

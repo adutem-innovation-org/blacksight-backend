@@ -6,6 +6,8 @@ export interface IMeetingProvider extends Document<Types.ObjectId> {
   provider: MeetingProvidersEnum;
   accessToken: string;
   refreshToken: string;
+  idToken: string;
+  sub: string;
   expiryDate: Date;
 }
 
@@ -32,6 +34,24 @@ const MeetingProviderSchema: Schema<IMeetingProvider> =
       refreshToken: {
         type: String,
         required: [true, "Please provide provider refresh token"],
+      },
+      idToken: {
+        type: String,
+        required: [
+          function () {
+            return this.provider === MeetingProvidersEnum.GOOGLE;
+          },
+          "Please provide google id token",
+        ],
+      },
+      sub: {
+        type: String,
+        required: [
+          function () {
+            return this.provider === MeetingProvidersEnum.GOOGLE;
+          },
+          "Please provide google id token",
+        ],
       },
       expiryDate: {
         type: Date,

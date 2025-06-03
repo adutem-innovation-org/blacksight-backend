@@ -1,0 +1,13 @@
+{
+    "summary": "Testing meeting",
+    "businessId": "681a6f9bc02b90610404db7a",
+    "botId": "683c85803c8cd40e9757d981",
+    "providerId": "68291341c0f11ef04187bffe",
+    "conversationId": "84b20d0c-4ed0-4c87-b3c5-b2740a3494c2",
+    "customerEmail": "philipowolab79@gmail.com",
+    "appointmentDate": "2025-06-06",
+    "appointmentTime": "17:00:00+04:00",
+    "status": "scheduled",
+    "notificationSent": false,
+    "scheduledByProvider": false
+}

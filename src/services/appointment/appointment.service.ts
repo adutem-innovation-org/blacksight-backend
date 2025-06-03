@@ -24,6 +24,7 @@ import {
 import EventEmitter2 from "eventemitter2";
 import { Logger } from "winston";
 import { logger } from "@/logging";
+import { BookingEventService } from "./booking-events.service";
 
 export class AppointmentService {
   private static instance: AppointmentService;
@@ -37,6 +38,7 @@ export class AppointmentService {
 
   constructor() {
     this.paginationService = new PaginationService(this.appointmentModel);
+    BookingEventService.getInstance();
     this._setupEventListeners();
   }
 
@@ -55,6 +57,55 @@ export class AppointmentService {
     this.eventEmitter.on(Events.SET_APPOINTMENT_PARAM, (payload) =>
       this._setAppointmentParam(payload)
     );
+  }
+
+  private async _initAppointment(payload: {
+    businessId: string;
+    conversationId: string;
+    botId: string;
+    providerId: string;
+    values: Record<string, any>;
+  }) {
+    let valuesToSet: Record<string, any> = {};
+    // const values = payload.values;
+    const { botId, conversationId, providerId, businessId, values } = payload;
+
+    if (values.email) {
+      valuesToSet["customerEmail"] = values.email;
+    }
+
+    if (values.date) {
+      valuesToSet["appointmentDate"] = values.date;
+    }
+
+    if (values.time) {
+      valuesToSet["appointmentTime"] = values.time;
+    }
+
+    if (values.summary) {
+      valuesToSet["summary"] = values.summary;
+    }
+
+    try {
+      await this.appointmentModel.findOneAndUpdate(
+        {
+          businessId,
+          conversationId,
+          botId,
+        },
+        {
+          businessId,
+          conversationId,
+          botId,
+          providerId,
+          ...valuesToSet,
+        },
+        { upsert: true }
+      );
+    } catch (error) {
+      this.logger.error("Unable to initilize appointment");
+      AppointmentService.jsonErrorLogger(error);
+    }
   }
 
   private async _setAppointmentParam(payload: {
@@ -188,45 +239,6 @@ export class AppointmentService {
 
     // ✅ Return an array of object {day: "Mon" | "Tue" etc, bookings: Number of appointment created in each day}
     return { data: Object.values(stats) };
-  }
-
-  private async _initAppointment(payload: {
-    businessId: string;
-    conversationId: string;
-    values: Record<string, any>;
-  }) {
-    let valuesToSet: Record<string, any> = {};
-    const values = payload.values;
-
-    if (values.email) {
-      valuesToSet["customerEmail"] = values.email;
-    }
-
-    if (values.date) {
-      valuesToSet["appointmentDate"] = values.date;
-    }
-
-    if (values.time) {
-      valuesToSet["appointmentTime"] = values.time;
-    }
-
-    try {
-      await this.appointmentModel.findOneAndUpdate(
-        {
-          businessId: payload.businessId,
-          conversationId: payload.conversationId,
-        },
-        {
-          businessId: payload.businessId,
-          conversationId: payload.conversationId,
-          ...valuesToSet,
-        },
-        { upsert: true }
-      );
-    } catch (error) {
-      this.logger.error("Unable to initilize appointment");
-      AppointmentService.jsonErrorLogger(error);
-    }
   }
 
   /**
