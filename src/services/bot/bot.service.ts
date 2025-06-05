@@ -53,6 +53,7 @@ import fs from "fs";
 import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import { AppointmentService } from "../appointment";
+import { endOfDay, format, startOfDay, subDays } from "date-fns";
 
 export class BotService {
   private static instance: BotService;
@@ -338,159 +339,6 @@ export class BotService {
 
     return { data: newMessage, conversationId: conversation.conversationId };
   }
-
-  // async askChatbot(authData: AuthData, body: AskChatbotDto) {
-  //   const { userQuery, botId, conversationId } = body;
-
-  //   const businessId = authData.userId.toString();
-  //   let bot: IBot | null = await this.cacheService.get(botId);
-  //   if (!bot) {
-  //     bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
-  //   }
-
-  //   if (!bot)
-  //     return throwUnprocessableEntityError("Unconfigured bot referenced");
-
-  //   // ✅ Step 1: Construct the context for the AI to work with
-  //   // The context for now will be a combination of the conversation summary + other message + userQuery + bot instructions
-  //   // Get current conversation
-  //   let conversation = await this.conversationService.getOrCreateConversation(
-  //     conversationId,
-  //     botId,
-  //     businessId
-  //   );
-
-  //   // Save new message to it
-  //   conversation = await this.conversationService.saveUserMessage(
-  //     conversation,
-  //     userQuery
-  //   );
-
-  //   // Process the conversation (generate summary if needed)
-  //   let context = await this.conversationService.processConversation(
-  //     conversation
-  //   );
-
-  //   // Extract relevant knowledge base
-  //   let extractedKB = "";
-  //   try {
-  //     const documentId = bot.knowledgeBase.documentId.toString();
-  //     console.log("Document Id", documentId);
-  //     extractedKB = await this.knowledgeBaseService.queryKnowledgeBase(
-  //       businessId,
-  //       documentId,
-  //       userQuery
-  //     );
-  //   } catch (error) {
-  //     BotService.logger.error("Unable to extract knowledge base");
-  //     BotService.logJsonError(error);
-  //   }
-
-  //   // Get bot custom instructions
-  //   const customInstruction =
-  //     bot.instructions ?? "No custom instruction from the business.";
-
-  //   // ✅ Step 2: Detect message intent
-  //   const intent = await this.conversationService.detectUserIntent({
-  //     ...context,
-  //     customInstruction,
-  //     extractedKB,
-  //     userQuery,
-  //   });
-
-  //   // ✅ Step 3: Handle intents
-  //   switch (intent.intent) {
-  //     case Intent.BOOK_APPOINTMENT:
-  //       this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
-  //         businessId,
-  //         conversationId,
-  //       });
-  //       break;
-  //     case Intent.SET_APPOINTMENT_DATE:
-  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-  //         param: AppointmentParam.DATE,
-  //         value: intent.parameters?.date,
-  //         businessId,
-  //         conversationId,
-  //       });
-  //       break;
-  //     case Intent.SET_APPOINTMENT_EMAIL:
-  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-  //         param: AppointmentParam.EMAIL,
-  //         value: intent.parameters?.email,
-  //         businessId,
-  //         conversationId,
-  //       });
-  //       break;
-  //     case Intent.SET_APPOINTMENT_TIME:
-  //       this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
-  //         param: AppointmentParam.TIME,
-  //         value: intent.parameters?.time,
-  //         businessId,
-  //         conversationId,
-  //       });
-  //     default:
-  //       break;
-  //   }
-
-  //   // let knowledgeText = "";
-  //   // const customInstructions =
-  //   //   bot.instructions ?? "No custom instruction from the business.";
-  //   // const documentId = bot.knowledgeBase.documentId.toString();
-
-  //   // if (intent.intent === Intent.UNKNOWN) {
-  //   //   if (documentId) {
-  //   //     // Retrieve the most relevant knowledge base chunks
-  //   //     try {
-  //   //       knowledgeText = await this.knowledgeBaseService.queryKnowledgeBase(
-  //   //         businessId,
-  //   //         documentId,
-  //   //         userQuery
-  //   //       );
-  //   //     } catch (error) {}
-  //   //   }
-  //   // }
-
-  //   // Structured prompt
-  //   // const developerPrompt = `
-  //   // You are a chatbot for a business.
-  //   // ${customInstructions}
-  //   // Use the following information to answer user queries:
-  //   // ${knowledgeText}
-
-  //   // Past conversation summary:
-  //   // ${context.summaries.join("\n")}
-
-  //   // Last action you carried out:
-  //   // ${intentActionsMapper[intent.intent]}
-  //   // `;
-
-  //   // Call OpenAI
-  //   // const openaiResponse = await this.openai.chat.completions.create({
-  //   //   model: "gpt-4",
-  //   //   messages: [
-  //   //     { role: "developer", content: developerPrompt },
-  //   //     ...context.unsummarizedMessages,
-  //   //   ],
-  //   // });
-
-  //   // const botResponse = {
-  //   //   role: RoleEnum.ASSISTANT,
-  //   //   content:
-  //   //     openaiResponse.choices[0].message.content ??
-  //   //     "I'm not sure I understood that. Could you please clarify",
-  //   // };
-  //   const botResponse = {
-  //     role: RoleEnum.ASSISTANT,
-  //     content: intent.message,
-  //   };
-
-  //   conversation.messages.push(botResponse);
-
-  //   await conversation.save();
-
-  //   return { data: botResponse };
-  // }
 
   async askChatbot(authData: AuthData, body: AskChatbotDto) {
     const { userQuery, botId, conversationId } = body;
@@ -807,5 +655,86 @@ export class BotService {
         console.warn("Converted file deletion failed:", err.message);
       }
     }
+  }
+
+  async responseTimeAnalytics(auth: AuthData) {
+    const today = startOfDay(new Date());
+    const startDate = subDays(today, 6);
+    const endDate = endOfDay(new Date());
+
+    const bots = await this.botModel.find({ businessId: auth.userId });
+
+    const botIds = bots.map((b) => b._id);
+    const botMap = Object.fromEntries(
+      bots.map((b) => [b._id.toString(), b.name])
+    );
+
+    const conversations = await this.conversationModel
+      .find({
+        botId: { $in: botIds },
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+      .lean();
+
+    // Initialize structure for each bot, with arrays for each of 7 days
+    const stats: Record<string, number[]> = {};
+    const counts: Record<string, number[]> = {};
+
+    for (const bot of bots) {
+      stats[bot.name] = Array(7).fill(0);
+      counts[bot.name] = Array(7).fill(0);
+    }
+
+    for (const convo of conversations) {
+      const { messages, botId } = convo;
+      if (!messages || messages.length < 2) continue;
+
+      let i = messages[0].role === "user" ? 0 : 1;
+
+      while (i < messages.length - 1) {
+        const userMsg = messages[i];
+        const botMsg = messages[i + 1];
+
+        if (
+          userMsg.role === "user" &&
+          botMsg.role === "assistant" &&
+          userMsg.createdAt &&
+          botMsg.createdAt
+        ) {
+          const responseTimeSec =
+            (botMsg.createdAt.getTime() - userMsg.createdAt.getTime()) / 1000;
+
+          const dayIndex =
+            6 -
+            Math.floor(
+              (today.getTime() - startOfDay(userMsg.createdAt).getTime()) /
+                (1000 * 60 * 60 * 24)
+            );
+
+          if (dayIndex >= 0 && dayIndex <= 6) {
+            const botName = botMap[botId.toString()];
+            stats[botName][dayIndex] += responseTimeSec;
+            counts[botName][dayIndex] += 1;
+          }
+
+          i += 2; // skip to next user-bot pair
+        } else {
+          i += 1; // skip if no valid pair
+        }
+      }
+    }
+
+    const result = Object.entries(stats).map(([botName, values]) => {
+      const averaged = values.map((sum, i) =>
+        counts[botName][i] ? +(sum / counts[botName][i]).toFixed(2) : 0
+      );
+      return { name: botName, data: averaged };
+    });
+
+    const categories = Array.from({ length: 7 }).map((_, i) =>
+      format(subDays(today, 6 - i), "yyyy-MM-dd")
+    );
+
+    return { series: result, categories };
   }
 }

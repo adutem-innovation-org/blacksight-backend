@@ -18,6 +18,7 @@ import {
 } from "@/models";
 import { Model, Types } from "mongoose";
 import { AppointmentService } from "../appointment";
+import { BotService } from "../bot";
 
 export class AnalyticsService {
   private static instance: AnalyticsService;
@@ -31,9 +32,11 @@ export class AnalyticsService {
   private readonly adminModel: Model<IAdmin> = Admin;
 
   private readonly appointmentService: AppointmentService;
+  private readonly botService: BotService;
 
   constructor() {
     this.appointmentService = AppointmentService.getInstance();
+    this.botService = BotService.getInstance();
   }
 
   static getInstance(): AnalyticsService {
@@ -52,6 +55,7 @@ export class AnalyticsService {
       this.conversationModel.countDocuments({ ...query }).exec(),
       this.knowledgeBaseModel.countDocuments({ ...query }).exec(),
       this.appointmentService.bookingStats(authData),
+      this.botService.responseTimeAnalytics(authData),
     ]);
 
     return {
@@ -67,6 +71,7 @@ export class AnalyticsService {
       },
       bookingStat:
         result[5].status === "fulfilled" ? result[5].value.data : null,
+      responseTime: result[6].status === "fulfilled" ? result[6].value : null,
     };
   }
 
