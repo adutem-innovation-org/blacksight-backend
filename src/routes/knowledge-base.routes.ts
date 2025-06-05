@@ -1,6 +1,6 @@
 import { KnowledgeBaseController } from "@/controllers";
 import { AddKnowledgeBaseDto } from "@/decorators";
-import { UserTypes } from "@/enums";
+import { KnowledgeBaseSources, UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
   permissionRequirement,
@@ -33,7 +33,7 @@ knowledgeBaseRouter.post(
     configs: {
       dest: "uploads/",
     },
-    required: true,
+    required: (req) => req.body.source === KnowledgeBaseSources.FILE,
   }),
   validateDTO(AddKnowledgeBaseDto),
   knowledgeBaseController.addKnowledgeBase

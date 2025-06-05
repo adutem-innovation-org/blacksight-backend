@@ -21,7 +21,7 @@ import {
 import { Pinecone } from "@pinecone-database/pinecone";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { BotStatus, Events, UserTypes } from "@/enums";
+import { BotStatus, Events, KnowledgeBaseSources, UserTypes } from "@/enums";
 import { Logger } from "winston";
 import EventEmitter2 from "eventemitter2";
 
@@ -88,23 +88,27 @@ export class KnowledgeBaseService {
       const documentId = new Types.ObjectId();
       let content = "";
 
-      const ext = path.extname(file.originalname).toLowerCase();
-      switch (ext) {
-        case ".txt":
-        case ".md":
-          content = await fs.promises.readFile(file.path, "utf-8");
-          break;
-        case ".pdf":
-          const file_data = await fs.promises.readFile(file.path);
-          const data = await pdfParse(file_data);
-          content = data.text;
-          break;
-        case ".docx":
-          const result = await mammoth.extractRawText({ path: file.path });
-          content = result.value;
-          break;
-        default:
-          return throwUnsupportedMediaTypeError("Unsupported file type.");
+      if (body.source === KnowledgeBaseSources.FILE) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        switch (ext) {
+          case ".txt":
+          case ".md":
+            content = await fs.promises.readFile(file.path, "utf-8");
+            break;
+          case ".pdf":
+            const file_data = await fs.promises.readFile(file.path);
+            const data = await pdfParse(file_data);
+            content = data.text;
+            break;
+          case ".docx":
+            const result = await mammoth.extractRawText({ path: file.path });
+            content = result.value;
+            break;
+          default:
+            return throwUnsupportedMediaTypeError("Unsupported file type.");
+        }
+      } else {
+        content = body.text ?? "";
       }
 
       const pineconeIndex = this.pinecone.Index("knowledge-base");

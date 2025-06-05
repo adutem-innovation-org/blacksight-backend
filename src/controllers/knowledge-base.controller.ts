@@ -1,4 +1,5 @@
 import { AddKnowledgeBaseDto } from "@/decorators";
+import { KnowledgeBaseSources } from "@/enums";
 import { sendSuccessResponse, throwBadRequestError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { KnowledgeBaseService } from "@/services";
@@ -29,7 +30,8 @@ export class KnowledgeBaseController {
     req: GenericReq<AddKnowledgeBaseDto>,
     res: Response
   ) => {
-    if (!req.file) return throwBadRequestError("No file uploaded.");
+    if (!req.file && req.body.source === KnowledgeBaseSources.FILE)
+      return throwBadRequestError("No file uploaded.");
     const data = await this.knowledgeBaseService.addKnowledgeBase(
       req.authData!,
       req.body,

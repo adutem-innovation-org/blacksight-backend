@@ -9,3 +9,4 @@ export * from "./reminder";
 export * from "./activity";
 export * from "./notification";
 export * from "./cron-expressions";
+export * from "./knowledge-base";

@@ -74,13 +74,11 @@ export const uploadFiles = (
             : field.required;
 
         if (isRequired && (!reqFiles || !reqFiles[field.name])) {
-          return res
-            .status(StatusCodes.BAD_REQUEST)
-            .json({
-              message: `Missing required file: ${field.name}`,
-              status: StatusCodes.BAD_REQUEST,
-              success: false,
-            });
+          return res.status(StatusCodes.BAD_REQUEST).json({
+            message: `Missing required file: ${field.name}`,
+            status: StatusCodes.BAD_REQUEST,
+            success: false,
+          });
         }
       }
 
@@ -92,7 +90,7 @@ export const uploadFiles = (
 export const uploadSingleFile = (options: {
   name: string;
   mimeTypes: string[];
-  required?: boolean;
+  required?: boolean | ((req: Request) => boolean);
   configs?: object;
 }) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -116,7 +114,12 @@ export const uploadSingleFile = (options: {
         });
       }
 
-      if (!req.file && options.required)
+      const isRequired =
+        typeof options.required === "function"
+          ? options.required(req)
+          : options.required;
+
+      if (!req.file && isRequired)
         return res.status(StatusCodes.BAD_REQUEST).json({
           messate: `Missing required file: ${options.name}`,
           success: false,
