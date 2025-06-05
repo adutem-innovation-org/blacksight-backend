@@ -212,7 +212,10 @@ export class KnowledgeBaseService {
     if (auth.userType === UserTypes.USER) {
       query.businessId = new Types.ObjectId(auth.userId);
     }
-    return await this.knowledgeBasePaginationService.paginate({ query }, []);
+    return await this.knowledgeBasePaginationService.paginate(
+      { query, projections: { chunks: 0 }, populate: ["connectedBots"] },
+      []
+    );
   }
 
   async getKnowledgeBaseById(auth: AuthData, id: string) {

@@ -1,4 +1,5 @@
 import { Document, Types, Model, model, Schema } from "mongoose";
+import mongooseLeanVirtuals from "mongoose-lean-virtuals";
 const collectionName = "knowledge-bases";
 
 type Chunk = {
@@ -54,6 +55,18 @@ const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
     toObject: { virtuals: true },
   }
 );
+
+KnowledgeBaseSchema.virtual("connectedBots", {
+  ref: "bots",
+  localField: "_id",
+  foreignField: "knowledgeBaseId",
+  options: {
+    select: "name _id status",
+    lean: true,
+  },
+});
+
+KnowledgeBaseSchema.plugin(mongooseLeanVirtuals);
 
 export const KnowledgeBase: Model<IKnowledgeBase> = model<IKnowledgeBase>(
   collectionName,
