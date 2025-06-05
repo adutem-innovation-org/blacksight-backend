@@ -56,6 +56,7 @@ export class AnalyticsService {
       this.knowledgeBaseModel.countDocuments({ ...query }).exec(),
       this.appointmentService.bookingStats(authData),
       this.botService.responseTimeAnalytics(authData),
+      this.botService.extractTokenUsageStats(authData.userId),
     ]);
 
     return {
@@ -72,6 +73,7 @@ export class AnalyticsService {
       bookingStat:
         result[5].status === "fulfilled" ? result[5].value.data : null,
       responseTime: result[6].status === "fulfilled" ? result[6].value : null,
+      tokenUsage: result[7].status === "fulfilled" ? result[7].value : null,
     };
   }
 

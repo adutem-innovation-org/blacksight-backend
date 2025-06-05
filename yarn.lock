@@ -48,6 +48,11 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
+"@dqbd/tiktoken@^1.0.21":
+  version "1.0.21"
+  resolved "https://registry.yarnpkg.com/@dqbd/tiktoken/-/tiktoken-1.0.21.tgz#afadabc2a57a9f10bae6a9ddbc83bcd7735d30d6"
+  integrity sha512-grBxRSY9+/iBM205EWjbMm5ySeXQrhJyXWMP38VJd+pO2DRGraDAbi4n8J8T9M4XY1M/FHgonMcmu3J+KjcX0Q==
+
 "@firebase/ai@1.3.0":
   version "1.3.0"
   resolved "https://registry.yarnpkg.com/@firebase/ai/-/ai-1.3.0.tgz#66b8edaa32d8e5d46c99be0efc337cbf034dffb7"

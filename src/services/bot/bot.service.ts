@@ -54,6 +54,8 @@ import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import { AppointmentService } from "../appointment";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
+import { encoding_for_model } from "@dqbd/tiktoken";
+const enc = encoding_for_model("gpt-4"); //
 
 export class BotService {
   private static instance: BotService;
@@ -736,5 +738,46 @@ export class BotService {
     );
 
     return { series: result, categories };
+  }
+
+  async extractTokenUsageStats(businessId: string) {
+    // Get all bots for the user
+    const bots = await Bot.find({ businessId: new Types.ObjectId(businessId) });
+
+    const result: Record<
+      string,
+      { botName: string; categories: string[]; series: number[] }
+    > = {};
+
+    for (const bot of bots) {
+      const conversations = await Conversation.find({ botId: bot._id });
+
+      let queryTokens = 0;
+      let responseTokens = 0;
+
+      for (const convo of conversations) {
+        for (const message of convo.messages) {
+          const tokenCount = enc.encode(message.content).length;
+          if (message.role === RoleEnum.USER) {
+            queryTokens += tokenCount;
+          } else if (message.role === RoleEnum.ASSISTANT) {
+            responseTokens += tokenCount;
+          }
+        }
+      }
+
+      const total = queryTokens + responseTokens || 1; // avoid division by 0
+
+      result[bot._id.toString()] = {
+        botName: bot.name,
+        categories: ["Query", "Response"],
+        series: [
+          Number(((queryTokens / total) * 100).toFixed(2)),
+          Number(((responseTokens / total) * 100).toFixed(2)),
+        ],
+      };
+    }
+
+    return Object.values(result);
   }
 }
