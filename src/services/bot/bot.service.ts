@@ -152,7 +152,7 @@ export class BotService {
       ...body,
     });
 
-    await bot.populate("knowledgeBase");
+    await bot.populate("knowledgeBases");
 
     return { bot, message: "Bot created successfully" };
   }
@@ -212,14 +212,27 @@ export class BotService {
   async validateBotConfiguration(
     body: ConfigureBotDto | UpdateBotConfigurationDto
   ) {
-    if (body.knowledgeBaseId) {
-      const knowledgeBaseExist = await this.knowledgeBaseModel.exists({
-        _id: new Types.ObjectId(body.knowledgeBaseId),
+    if (body.knowledgeBaseIds) {
+      // const knowledgeBaseExist = await this.knowledgeBaseModel.exists({
+      //   _id: new Types.ObjectId(body.knowledgeBaseId),
+      // });
+      // if (!knowledgeBaseExist)
+      //   return throwUnprocessableEntityError(
+      //     "The knowledge base you selected does not exist."
+      //   );
+      const validObjectIds = body.knowledgeBaseIds
+        .filter((id) => Types.ObjectId.isValid(id))
+        .map((id) => new Types.ObjectId(id));
+
+      const existingCount = await this.knowledgeBaseModel.countDocuments({
+        _id: { $in: validObjectIds },
       });
-      if (!knowledgeBaseExist)
+
+      if (existingCount !== validObjectIds.length) {
         return throwUnprocessableEntityError(
-          "The knowledge base you selected does not exist."
+          "One or more of the selected knowledge bases do not exist."
         );
+      }
     }
 
     // validate if meeting provider exist, when schedule meeting is true and meetingProviderId is provided
@@ -267,7 +280,7 @@ export class BotService {
 
     if (status) {
       await this.runKBValidation(
-        bot.knowledgeBaseId.toString(),
+        bot.knowledgeBaseIds,
         "Cannot activate this bot, because its associated knowledge base has been deleted",
         "Cannot activate this bot, because its associated knowledge base is inactive."
       );
@@ -284,21 +297,49 @@ export class BotService {
    * Validates in the current knowledge base exists and is active
    * @param botId
    */
+  // async runKBValidation(
+  //   kbId: string,
+  //   notFoundErrorMsg?: string,
+  //   inActiveErrorMsg?: string
+  // ) {
+  //   const kb = await this.knowledgeBaseModel.findById(kbId);
+  //   if (!kb)
+  //     return throwNotFoundError(
+  //       notFoundErrorMsg ?? "The knowledgebase does not exist"
+  //     );
+
+  //   if (!kb.isActive)
+  //     return throwUnprocessableEntityError(
+  //       inActiveErrorMsg ?? "The knowledgebase is inactive"
+  //     );
+  // }
   async runKBValidation(
-    kbId: string,
+    kbIds: string[] | Types.ObjectId[],
     notFoundErrorMsg?: string,
     inActiveErrorMsg?: string
   ) {
-    const kb = await this.knowledgeBaseModel.findById(kbId);
-    if (!kb)
-      return throwNotFoundError(
-        notFoundErrorMsg ?? "The knowledgebase does not exist"
-      );
+    const validObjectIds = kbIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
 
-    if (!kb.isActive)
-      return throwUnprocessableEntityError(
-        inActiveErrorMsg ?? "The knowledgebase is inactive"
+    const kbs = await this.knowledgeBaseModel.find({
+      _id: { $in: validObjectIds },
+    });
+
+    if (kbs.length !== kbIds.length) {
+      return throwNotFoundError(
+        notFoundErrorMsg ??
+          "One or more of the selected knowledge bases do not exist"
       );
+    }
+
+    const inactive = kbs.find((kb) => !kb.isActive);
+    if (inactive) {
+      return throwUnprocessableEntityError(
+        inActiveErrorMsg ??
+          "One or more of the selected knowledge bases are inactive"
+      );
+    }
   }
 
   /**
@@ -486,16 +527,39 @@ export class BotService {
     return { data: botResponse };
   }
 
+  // private async extractKnowledgeBase(
+  //   bot: IBot,
+  //   businessId: string,
+  //   userQuery: string
+  // ): Promise<string> {
+  //   try {
+  //     const documentId = bot.knowledgeBase.documentId.toString();
+  //     return await this.knowledgeBaseService.queryKnowledgeBase(
+  //       businessId,
+  //       documentId,
+  //       userQuery
+  //     );
+  //   } catch (error) {
+  //     BotService.logger.error("Unable to extract knowledge base");
+  //     BotService.logJsonError(error);
+  //     return "";
+  //   }
+  // }
   private async extractKnowledgeBase(
     bot: IBot,
     businessId: string,
     userQuery: string
   ): Promise<string> {
     try {
-      const documentId = bot.knowledgeBase.documentId.toString();
-      return await this.knowledgeBaseService.queryKnowledgeBase(
+      const documentIds = (bot.knowledgeBases || [])
+        .map((kb) => kb.documentId?.toString())
+        .filter(Boolean);
+
+      if (documentIds.length === 0) return "";
+
+      return await this.knowledgeBaseService.queryKnowledgeBases(
         businessId,
-        documentId,
+        documentIds,
         userQuery
       );
     } catch (error) {

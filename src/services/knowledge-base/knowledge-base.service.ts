@@ -182,11 +182,40 @@ export class KnowledgeBaseService {
     }
   }
 
-  queryKnowledgeBase = async (
+  // queryKnowledgeBase = async (
+  //   businessId: string,
+  //   documentId: string,
+  //   userQuery: string
+  // ) => {
+  //   const pineconeIndex = this.pinecone.Index("knowledge-base");
+
+  //   const embeddingResponse = await this.openai.embeddings.create({
+  //     model: "text-embedding-3-small",
+  //     input: userQuery,
+  //   });
+
+  //   const queryEmbedding = embeddingResponse.data[0].embedding;
+
+  //   const searchResults = await pineconeIndex.query({
+  //     vector: queryEmbedding,
+  //     topK: 3,
+  //     includeMetadata: true,
+  //     filter: {
+  //       businessId,
+  //       documentId,
+  //     },
+  //   });
+
+  //   return searchResults.matches
+  //     .map((match) => match?.metadata?.text || "")
+  //     .join("\n\n");
+  // };
+
+  queryKnowledgeBases = async (
     businessId: string,
-    documentId: string,
+    documentIds: string[],
     userQuery: string
-  ) => {
+  ): Promise<string> => {
     const pineconeIndex = this.pinecone.Index("knowledge-base");
 
     const embeddingResponse = await this.openai.embeddings.create({
@@ -198,11 +227,11 @@ export class KnowledgeBaseService {
 
     const searchResults = await pineconeIndex.query({
       vector: queryEmbedding,
-      topK: 3,
+      topK: 5, // you can increase since results are now across multiple docs
       includeMetadata: true,
       filter: {
         businessId,
-        documentId,
+        documentId: { $in: documentIds },
       },
     });
 

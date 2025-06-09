@@ -33,7 +33,7 @@ export class BotSharedService {
   async deactivateBotsByKbId(auth: AuthData, knowledgeBaseId: string) {
     try {
       const allAssociatedBots = await this.botModel.find({
-        knowledgeBaseId: new Types.ObjectId(knowledgeBaseId),
+        knowledgeBaseIds: new Types.ObjectId(knowledgeBaseId),
       });
 
       if (allAssociatedBots.length === 0) return;

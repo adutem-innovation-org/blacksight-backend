@@ -59,9 +59,9 @@ const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
 KnowledgeBaseSchema.virtual("connectedBots", {
   ref: "bots",
   localField: "_id",
-  foreignField: "knowledgeBaseId",
+  foreignField: "knowledgeBaseIds",
   options: {
-    select: "name _id status",
+    select: "name _id status -knowledgeBaseIds -knowledgeBases",
     lean: true,
   },
 });

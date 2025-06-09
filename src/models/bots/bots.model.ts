@@ -6,8 +6,8 @@ const collectionName = "bots";
 
 export interface IBot extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
-  knowledgeBaseId: Types.ObjectId;
-  knowledgeBase: IKnowledgeBase;
+  knowledgeBaseIds: Types.ObjectId[];
+  knowledgeBases?: IKnowledgeBase[];
   name: string;
   instructions: string;
   welcomeMessage: string;
@@ -24,8 +24,8 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
       required: [true, "Business id is required"],
       ref: "users",
     },
-    knowledgeBaseId: {
-      type: Schema.Types.ObjectId,
+    knowledgeBaseIds: {
+      type: [Schema.Types.ObjectId],
       required: [true, "Please provide knowledge base"],
       ref: "knowledge-bases",
     },
@@ -77,18 +77,18 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
   }
 );
 
-BotSchema.virtual("knowledgeBase", {
+BotSchema.virtual("knowledgeBases", {
   ref: "knowledge-bases",
-  localField: "knowledgeBaseId",
+  localField: "knowledgeBaseIds",
   foreignField: "_id",
-  justOne: true,
+  justOne: false,
   options: {
     select: "tag isActive documentId",
   },
 });
 
 function autoPopulateKnowledgeBase(this: any, next: Function) {
-  this.populate("knowledgeBase");
+  this.populate("knowledgeBases");
   next();
 }
 

@@ -73,6 +73,7 @@ export class ApiKeyService {
     return {
       message: "API key reset successful",
       apiKey: { ...apiKeyDoc, secretKey: raw },
+      oldId: oldKey._id,
     };
   }
 
@@ -87,6 +88,25 @@ export class ApiKeyService {
       []
     );
     return result;
+  }
+
+  async revokeApiKey(auth: AuthData, id: string) {
+    const userId = auth.userId.toString();
+
+    const apiKey = await this.apiKeyModel.findOneAndUpdate(
+      {
+        ownerId: new Types.ObjectId(userId),
+        _id: new Types.ObjectId(id),
+      },
+      { revoked: true },
+      { new: true }
+    );
+
+    if (!apiKey) return throwNotFoundError("API key not found");
+
+    const { key, ...apiKeyDoc } = apiKey.toJSON();
+
+    return { message: "API key revoked", apiKe: apiKeyDoc };
   }
 
   private _generateApiKey(): { raw: string; hashed: string } {

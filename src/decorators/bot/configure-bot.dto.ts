@@ -1,5 +1,7 @@
 import { Type } from "class-transformer";
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsDefined,
   IsMongoId,
@@ -14,11 +16,21 @@ export class ConfigureBotDto {
   @IsString({ message: "Bot name must be string" })
   name!: string;
 
-  @IsDefined({ message: "Please provide knowledge base identifier" })
-  @IsMongoId({
-    message: "Knowledge base identifier must be a valid database identifier",
+  // @IsDefined({ message: "Please provide knowledge base identifier" })
+  // @IsMongoId({
+  //   message: "Knowledge base identifier must be a valid database identifier",
+  // })
+  // knowledgeBaseId!: Types.ObjectId;
+  @IsArray({ message: "Knowledge bases should be an array" })
+  @ArrayNotEmpty({
+    message: "You must select at least one knowledge base",
   })
-  knowledgeBaseId!: Types.ObjectId;
+  @IsMongoId({
+    each: true,
+    message:
+      "Each knowledge base identifier must be a valid database identifier",
+  })
+  knowledgeBaseIds!: Types.ObjectId[];
 
   @IsOptional()
   @IsString({ message: "Instructions must be of type string" })
@@ -50,10 +62,20 @@ export class UpdateBotConfigurationDto {
   name?: string;
 
   @IsOptional()
-  @IsMongoId({
-    message: "Knowledge base identifier must be a valid database identifier",
+  // @IsMongoId({
+  //   message: "Knowledge base identifier must be a valid database identifier",
+  // })
+  // knowledgeBaseId?: Types.ObjectId;
+  @IsArray({ message: "Knowledge bases should be an array" })
+  @ArrayNotEmpty({
+    message: "You must select at least one knowledge base",
   })
-  knowledgeBaseId?: Types.ObjectId;
+  @IsMongoId({
+    each: true,
+    message:
+      "Each knowledge base identifier must be a valid database identifier",
+  })
+  knowledgeBaseIds?: Types.ObjectId[];
 
   @IsOptional()
   @IsString({ message: "Instructions must be of type string" })
