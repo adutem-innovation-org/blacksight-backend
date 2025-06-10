@@ -70,4 +70,7 @@ export const config = {
     },
   },
   isProduction: process.env.ENVIRONMENT === "production",
+  encryption: {
+    apiKey: process.env.API_KEY_ENCRYPTION_KEY!,
+  },
 };
