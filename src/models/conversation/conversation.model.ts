@@ -2,6 +2,7 @@ import { ConversationMode, RoleEnum } from "@/enums";
 import { formatDuration, intervalToDuration } from "date-fns";
 import { Document, Types, Schema, model, Model } from "mongoose";
 import mongooseLeanVirtuals from "mongoose-lean-virtuals";
+import { IBot } from "../bots";
 const collectionName = "conversations";
 export interface IMessage {
   role: RoleEnum;
@@ -18,6 +19,7 @@ export interface IConversation extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   conversationId: string;
   botId: Types.ObjectId;
+  bot?: IBot;
   mode: ConversationMode;
   duration?: string; // Virtual field
   messages: IMessage[];
@@ -125,6 +127,16 @@ ConversationSchema.virtual("duration").get(function (this: IConversation) {
   //   formatDuration(duration, { format: ["hours", "minutes", "seconds"] }) ||
   //   "0s"
   // );
+});
+
+ConversationSchema.virtual("bot", {
+  ref: "bots",
+  localField: "botId",
+  foreignField: "_id",
+  justOne: true,
+  options: {
+    select: "name status",
+  },
 });
 
 // Schema lean virtual plugins to populate virtauls even in lean mode (Pagination Service)
