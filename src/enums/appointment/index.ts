@@ -16,5 +16,7 @@ export enum AppointmentParam {
   DATE = "date",
   TIME = "time",
   EMAIL = "email",
+  NAME = "name",
+  PHONE = "phone",
   DATE_TIME = "date-time",
 }

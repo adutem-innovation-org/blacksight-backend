@@ -5,6 +5,7 @@ import {
   Events,
   Intent,
   RoleEnum,
+  TTL,
 } from "@/enums";
 import {
   AskChatbotDto,
@@ -170,7 +171,6 @@ export class BotService {
     body: UpdateBotInstructionsDto
   ) {
     await this.validateBotConfiguration(body);
-
     return await this.setBotConfigs(auth, id, body);
   }
 
@@ -200,6 +200,9 @@ export class BotService {
     );
 
     if (!bot) return throwNotFoundError("Bot not found");
+
+    // Delete bot data in cache
+    await this.cacheService.delete(bot._id.toString());
 
     return { bot, message: "Bot updated" };
   }
@@ -289,6 +292,9 @@ export class BotService {
     bot.status = status ? BotStatus.ACTIVE : BotStatus.INACTIVE;
     bot.isActive = status;
     await bot.save();
+
+    // Delete bot data in cache
+    await this.cacheService.delete(bot._id.toString());
 
     return bot;
   }
@@ -389,11 +395,29 @@ export class BotService {
 
     // Get bot configuration
     let bot: IBot | null = await this.cacheService.get(botId);
+    console.log("Bot data from cache >> ", bot);
     if (!bot) {
       bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
+      if (!bot) {
+        return throwUnprocessableEntityError("Unconfigured bot referenced");
+      }
+      await this.cacheService.set(botId, bot, TTL.IN_10_MINUTES);
     }
-    if (!bot) {
-      return throwUnprocessableEntityError("Unconfigured bot referenced");
+
+    // Get current appointment context
+    const appointmentCacheKey = `appointment-id-${conversationId}`;
+    let appointmentId = (await this.cacheService.get(
+      appointmentCacheKey
+    )) as string;
+
+    console.log("AppointmentId from cache >> ", appointmentId);
+    if (!appointmentId) {
+      appointmentId = new Types.ObjectId().toString();
+      await this.cacheService.set(
+        appointmentCacheKey,
+        appointmentId,
+        TTL.IN_30_MINUTES
+      );
     }
 
     // Get or create conversation
@@ -405,14 +429,20 @@ export class BotService {
 
     // Get the appointment data
     const result = await this.appointmentService.getConversationAppointment(
-      conversationId
+      // conversationId
+      appointmentId
     );
+
+    console.log(result);
+
     const currentAppointmentData =
       result?.isRecent && result.appointment
         ? `Current appointment data collected: ${JSON.stringify(
             result.appointment
           )}`
         : "Current appointment data collected: None";
+
+    console.log(currentAppointmentData);
 
     // Process conversation with optimized context
     const context = await this.conversationService.processConversationOptimized(
@@ -453,23 +483,25 @@ export class BotService {
       await this.handleFunctionCalls(
         intentResult.functionCalls,
         businessId,
-        conversationId
+        conversationId,
+        botId,
+        appointmentId,
+        bot.scheduleMeeting ? bot?.meetingProviderId : undefined
       );
     }
 
     // Handle cases where the function call is not called but that the intent is detected
-    if (
-      (!intentResult.functionCalls ||
-        intentResult?.functionCalls.length === 0) &&
-      intentResult.intent !== Intent.GENERAL_INQUIRY
-    ) {
+    if (intentResult.intent !== Intent.GENERAL_INQUIRY) {
       switch (intentResult.intent) {
         case Intent.BOOK_APPOINTMENT:
           this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
+            appointmentId,
             botId,
-            providerId: bot?.meetingProviderId,
+            providerId: bot.scheduleMeeting
+              ? bot?.meetingProviderId
+              : undefined,
             values: intentResult.parameters || {},
           });
           break;
@@ -479,14 +511,37 @@ export class BotService {
             value: intentResult.parameters?.email,
             businessId,
             conversationId,
+            appointmentId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_NAME:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.NAME,
+            value: intentResult.parameters?.name,
+            businessId,
+            conversationId,
+            appointmentId,
+          });
+          break;
+        case Intent.SET_APPOINTMENT_PHONE:
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.PHONE,
+            value: intentResult.parameters?.phone,
+            businessId,
+            conversationId,
+            appointmentId,
           });
           break;
         case Intent.SET_APPOINTMENT_DATE:
           this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE,
-            value: intentResult.parameters?.date,
+            value: {
+              date: intentResult.parameters?.date,
+              time: intentResult.parameters?.time,
+            },
             businessId,
             conversationId,
+            appointmentId,
           });
           break;
         case Intent.SET_APPOINTMENT_TIME:
@@ -495,6 +550,7 @@ export class BotService {
             value: intentResult.parameters?.time,
             businessId,
             conversationId,
+            appointmentId,
           });
           break;
         case Intent.SET_APPOINTMENT_DATE_AND_TIME:
@@ -503,22 +559,43 @@ export class BotService {
             values: intentResult.parameters,
             businessId,
             conversationId,
+            appointmentId,
           });
+          break;
+        case Intent.END_CONVERSATION:
+          await this.cacheService.delete(appointmentCacheKey);
           break;
         default:
           break;
       }
     }
 
-    // Generate contextual response
-    const botResponse =
-      await this.conversationService.generateContextualResponse({
+    const shouldFallbackToContext =
+      !intentResult.message || intentResult.message.length < 20; // e.g., "Okay noted." isn't helpful
+
+    let botResponse;
+
+    if (shouldFallbackToContext) {
+      botResponse = await this.conversationService.generateContextualResponse({
         context,
         extractedKB,
         customInstruction,
         intentResult,
         userQuery,
       });
+    } else {
+      botResponse = { role: RoleEnum.ASSISTANT, content: intentResult.message };
+    }
+
+    // Generate contextual response
+    // const botResponse =
+    //   await this.conversationService.generateContextualResponse({
+    //     context,
+    //     extractedKB,
+    //     customInstruction,
+    //     intentResult,
+    //     userQuery,
+    //   });
 
     // Save bot response
     conversation.messages.push(botResponse);
@@ -572,7 +649,10 @@ export class BotService {
   private async handleFunctionCalls(
     functionCalls: any[],
     businessId: string,
-    conversationId: string
+    conversationId: string,
+    botId: string,
+    appointmentId: string,
+    providerId?: Types.ObjectId
   ) {
     for (const functionCall of functionCalls) {
       const { name, arguments: args } = functionCall;
@@ -582,6 +662,10 @@ export class BotService {
           this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
+            appointmentId,
+            botId,
+            providerId,
+            value: JSON.parse(args),
           });
           break;
 
@@ -591,15 +675,40 @@ export class BotService {
             value: JSON.parse(args).email,
             businessId,
             conversationId,
+            appointmentId,
+          });
+          break;
+
+        case "collect_appointment_name":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.NAME,
+            value: JSON.parse(args).name,
+            businessId,
+            conversationId,
+            appointmentId,
+          });
+          break;
+
+        case "collect_appointment_phone":
+          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+            param: AppointmentParam.PHONE,
+            value: JSON.parse(args).phone,
+            businessId,
+            conversationId,
+            appointmentId,
           });
           break;
 
         case "set_appointment_date":
           this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE,
-            value: JSON.parse(args).date,
+            value: {
+              date: JSON.parse(args).date,
+              time: JSON.parse(args).time,
+            },
             businessId,
             conversationId,
+            appointmentId,
           });
           break;
 
@@ -609,6 +718,7 @@ export class BotService {
             value: JSON.parse(args).time,
             businessId,
             conversationId,
+            appointmentId,
           });
           break;
 
@@ -618,6 +728,7 @@ export class BotService {
             value: JSON.parse(args),
             businessId,
             conversationId,
+            appointmentId,
           });
           break;
       }
@@ -738,7 +849,7 @@ export class BotService {
     const conversations = await this.conversationModel
       .find({
         botId: { $in: botIds },
-        createdAt: { $gte: startDate, $lte: endDate },
+        updatedAt: { $gte: startDate, $lte: endDate },
       })
       .lean();
 

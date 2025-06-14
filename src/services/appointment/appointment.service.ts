@@ -8,6 +8,7 @@ import {
   logJsonError,
   throwForbiddenError,
   throwNotFoundError,
+  throwUnprocessableEntityError,
 } from "@/helpers";
 import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
 import { Appointment, IAppointment } from "@/models";
@@ -62,16 +63,26 @@ export class AppointmentService {
   private async _initAppointment(payload: {
     businessId: string;
     conversationId: string;
+    appointmentId: string;
     botId: string;
-    providerId: string;
+    providerId?: string;
     values: Record<string, any>;
   }) {
     let valuesToSet: Record<string, any> = {};
     // const values = payload.values;
-    const { botId, conversationId, providerId, businessId, values } = payload;
+    const { botId, conversationId, appointmentId, businessId, values } =
+      payload;
 
     if (values.email) {
       valuesToSet["customerEmail"] = values.email;
+    }
+
+    if (values.name) {
+      valuesToSet["customerName"] = values.name;
+    }
+
+    if (values.phone) {
+      valuesToSet["customerPhone"] = values.phone;
     }
 
     if (values.date) {
@@ -87,17 +98,13 @@ export class AppointmentService {
     }
 
     try {
-      await this.appointmentModel.findOneAndUpdate(
+      await this.appointmentModel.findByIdAndUpdate(
+        appointmentId,
         {
           businessId,
           conversationId,
           botId,
-        },
-        {
-          businessId,
-          conversationId,
-          botId,
-          providerId,
+          providerId: payload.providerId,
           ...valuesToSet,
         },
         { upsert: true }
@@ -113,26 +120,42 @@ export class AppointmentService {
     value: any;
     conversationId: string;
     businessId: string;
+    appointmentId: string;
   }) {
     try {
-      const { param, value, conversationId, businessId } = payload;
-      const query = {
-        businessId: new Types.ObjectId(businessId),
-        conversationId,
-      };
+      const { param, value, conversationId, businessId, appointmentId } =
+        payload;
+
+      console.log("Data >> ", payload);
+
+      if (!appointmentId)
+        return throwUnprocessableEntityError(
+          "Cannot set appointment with missing id"
+        );
+
       let valueToSet: Record<string, any> = {
         businessId,
         conversationId,
       };
+
       switch (param) {
         case AppointmentParam.DATE:
-          valueToSet["appointmentDate"] = value;
+          valueToSet["appointmentDate"] = value.date;
+          if (value.time) {
+            valueToSet["appointmentTime"] = value.time;
+          }
           break;
         case AppointmentParam.TIME:
           valueToSet["appointmentTime"] = value;
           break;
         case AppointmentParam.EMAIL:
           valueToSet["customerEmail"] = value;
+          break;
+        case AppointmentParam.NAME:
+          valueToSet["customerName"] = value;
+          break;
+        case AppointmentParam.PHONE:
+          valueToSet["customerPhone"] = value;
           break;
         case AppointmentParam.DATE_TIME:
           if (value.date) {
@@ -146,16 +169,21 @@ export class AppointmentService {
           break;
       }
 
-      let appointment = await this.appointmentModel.findOneAndUpdate(
-        query,
+      console.log("Appointment data to be set >> ", valueToSet);
+
+      let appointment = await this.appointmentModel.findByIdAndUpdate(
+        appointmentId,
         valueToSet,
         { new: true, upsert: true }
       );
 
+      // Updated condition to include name and phone for complete appointment
       if (
         appointment.appointmentDate &&
         appointment.appointmentTime &&
-        appointment.customerEmail
+        appointment.customerEmail &&
+        appointment.customerName &&
+        appointment.customerPhone
       ) {
         appointment.status = AppointmentStatus.SCHEDULED;
         await appointment.save();
@@ -313,17 +341,20 @@ export class AppointmentService {
     return { appointment };
   }
 
-  async getConversationAppointment(conversationId: string) {
+  async getConversationAppointment(appointmentId: string) {
     try {
-      const appointment = await this.appointmentModel.findOne({
-        conversationId,
-      });
+      // const appointment = await this.appointmentModel.findOne({
+      //   conversationId,
+      // });
+      // if (!appointment) return null;
+      // const isRecent = this._isWithinLast(
+      //   appointment?.createdAt,
+      //   2 * 60 * 60 * 1000
+      // ); // 2 hourse
+      // return { appointment, isRecent };
+      const appointment = await this.appointmentModel.findById(appointmentId);
       if (!appointment) return null;
-      const isRecent = this._isWithinLast(
-        appointment?.createdAt,
-        2 * 60 * 60 * 1000
-      ); // 2 hourse
-      return { appointment, isRecent };
+      return { appointment, isRecent: true };
     } catch (error) {
       return null;
     }

@@ -7,6 +7,8 @@ export const intentDetectionSchema = {
       enum: [
         "BOOK_APPOINTMENT",
         "SET_APPOINTMENT_EMAIL",
+        "SET_APPOINTMENT_NAME",
+        "SET_APPOINTMENT_PHONE",
         "SET_APPOINTMENT_DATE",
         "SET_APPOINTMENT_TIME",
         "GENERAL_INQUIRY",
@@ -17,10 +19,12 @@ export const intentDetectionSchema = {
       type: "object",
       properties: {
         email: { type: ["string", "null"], format: "email" },
+        name: { type: ["string", "null"] },
+        phone: { type: ["string", "null"] },
         date: { type: ["string", "null"], format: "date" },
         time: { type: ["string", "null"], format: "time" },
       },
-      required: ["email", "date", "time"],
+      required: ["email", "name", "phone", "date", "time"],
       additionalProperties: false,
     },
     message: {

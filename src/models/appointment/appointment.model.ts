@@ -2,6 +2,7 @@ import { AppointmentStatus } from "@/enums";
 import { emailRegex } from "@/utils";
 import { Types, Document, Schema, model } from "mongoose";
 const collectionName = "appointments";
+
 // Interface for Appointment Document
 export interface IAppointment extends Document<Types.ObjectId> {
   summary?: string;
@@ -12,6 +13,8 @@ export interface IAppointment extends Document<Types.ObjectId> {
   provider?: Types.Map<any>; // Virtual property
   conversationId: string;
   customerEmail: string;
+  customerName: string;
+  customerPhone: string;
   appointmentDate: string;
   appointmentTime: string;
   duration: number;
@@ -51,6 +54,12 @@ const AppointmentSchema = new Schema<IAppointment>(
     customerEmail: {
       type: String,
       match: [emailRegex, "Please provide a valid email"],
+    },
+    customerName: {
+      type: String,
+    },
+    customerPhone: {
+      type: String,
     },
     appointmentDate: { type: String },
     appointmentTime: { type: String },
@@ -134,6 +143,8 @@ AppointmentSchema.index({ businessId: 1 });
 AppointmentSchema.index({ conversationId: 1 });
 AppointmentSchema.index({ botId: 1 });
 AppointmentSchema.index({ appointmentDate: 1 });
+AppointmentSchema.index({ customerEmail: 1 });
+AppointmentSchema.index({ customerName: 1 });
 
 // Create the Appointment Model
 export const Appointment = model<IAppointment>(

@@ -91,7 +91,9 @@ export class ConversationService {
     if (auth.userType === UserTypes.USER) {
       query.businessId = new Types.ObjectId(auth.userId);
     }
-    return await this.paginationService.paginate({ query }, ["-createdAt"]);
+    return await this.paginationService.paginate({ query, populate: ["bot"] }, [
+      "-createdAt",
+    ]);
   }
 
   async getOrCreateConversation(
@@ -518,6 +520,8 @@ export class ConversationService {
     CLASSIFICATION INTENTS:
     - BOOK_APPOINTMENT: User wants to book/schedule an appointment
     - SET_APPOINTMENT_EMAIL: User provides email for appointment (PRIORITY - collect this first)
+    - SET_APPOINTMENT_NAME: User provides their name for appointment
+    - SET_APPOINTMENT_PHONE: User provides their phone number for appointment
     - SET_APPOINTMENT_DATE: User provides or wants to set appointment date
     - SET_APPOINTMENT_TIME: User provides or wants to set appointment time  
     - SET_APPOINTMENT_DATE_AND_TIME: User provides or wants to set both date and time in one message
@@ -525,8 +529,10 @@ export class ConversationService {
     - END_CONVERSATION: If the user says things like "no further inquiry", "that's all", or "I'm done", "nothing else", "that will be all for now", "thank you for your time". 
 
     FUNCTION CALLING REQUIREMENTS:
-    1. When the user provides email, date, and time (either gradually or via SET_APPOINTMENT_DATE_AND_TIME), emit all three related function calls:
-      set_appointment_email
+    1. When the user provides email, name, phone, date, and time (either gradually or via SET_APPOINTMENT_DATE_AND_TIME), emit all related function calls:
+      collect_appointment_email
+      collect_appointment_name
+      collect_appointment_phone
       set_appointment_date
       set_appointment_time
     This is required even if some values were already set earlier, for reinforcement and consistency.
@@ -534,9 +540,28 @@ export class ConversationService {
 
     APPOINTMENT BOOKING FLOW:
     1. First collect EMAIL (most important)
-    2. Then collect DATE
-    3. Finally collect TIME
-    4. Confirm appointment
+    2. Then collect NAME
+    3. Then collect PHONE NUMBER
+    4. Then collect DATE
+    5. Finally collect TIME
+    6. Confirm appointment details with user before finalizing
+
+    CRITICAL DATA HANDLING RULES:
+    - NEVER pass data from the Knowledge Base as parameters or function arguments
+    - Only use actual user-provided data for function calls and parameters
+    - Knowledge Base information should only be used for context and responses, not as extracted data
+
+    APPOINTMENT CONFIRMATION REQUIREMENT:
+    After collecting all necessary parameters (email, name, phone, date, time), ALWAYS provide a detailed confirmation summary before finalizing the appointment. Format it as follows:
+
+    "Thank you for your patience. Here are the details for your appointment:
+    
+    * **Name:** [User's Name]
+    * **Phone Number:** [User's Phone]
+    * **Date and Time:** [Formatted Date and Time]
+    * **Email:** [User's Email]
+    
+    If everything looks good, I'll proceed with scheduling your appointment. Please let me know if you need any changes."
 
     CONTEXT INFORMATION:
     Business Instructions: ${customInstruction}
@@ -550,12 +575,13 @@ export class ConversationService {
     RESPONSE REQUIREMENTS:
     1. Always return valid JSON in the specified schema
     2. Provide natural, helpful messages
-    3. Use knowledge base information when relevant
-    4. For appointments, follow the email → date → time sequence
-    5. Confirm appointment once email, date, and time are all collected — either together or in separate steps.
+    3. Use knowledge base information when relevant for context only
+    4. For appointments, follow the email → name → phone → date → time → confirmation sequence
+    5. Confirm appointment details once all information is collected
     6. Be conversational and professional
     7. Extract parameters accurately (email format, date as YYYY-MM-DD, time as HH:MM)
     8. Treat relative dates like "next Friday", "tomorrow", "next tomorrow" relative to the current date: ${currentDate}
+    9. Never use Knowledge Base data as function parameters - only use actual user input
 
     Your response must be valid JSON with "intent", "message", and optional "parameters" fields.`;
   }

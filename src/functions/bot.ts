@@ -25,6 +25,36 @@ export const appointmentFunctions = [
     },
   },
   {
+    name: "collect_appointment_name",
+    description: "Collect user's full name for appointment",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "User's full name",
+        },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "collect_appointment_phone",
+    description: "Collect and validate user's phone number for appointment",
+    parameters: {
+      type: "object",
+      properties: {
+        phone: {
+          type: "string",
+          description: "User's phone number",
+        },
+      },
+      required: ["phone"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "set_appointment_date",
     description: "Set the appointment date",
     parameters: {
