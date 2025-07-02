@@ -12,3 +12,5 @@ export * from "./forgot-password";
 export * from "./update-address.dto";
 export * from "./update-profile.dto";
 export * from "./update-profile-image.dto";
+export * from "./onboard.dto";
+export * from "./update-business-info.dto";

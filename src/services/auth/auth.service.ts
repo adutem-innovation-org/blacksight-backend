@@ -1,7 +1,16 @@
 import { config } from "@/config";
 import { Events, SocialOptionEnum, TTL, UserTypes } from "@/enums";
 import { AuthData } from "@/interfaces";
-import { Admin, IAdmin, IMerchant, IUser, Merchant, User } from "@/models";
+import {
+  Admin,
+  Business,
+  IAdmin,
+  IBusiness,
+  IMerchant,
+  IUser,
+  Merchant,
+  User,
+} from "@/models";
 import {
   CacheService,
   eventEmitter,
@@ -29,6 +38,9 @@ import {
   UpdateAddressDto,
   UpdateProfileDto,
   UpdateProfileImageDto,
+  OnboardBusinessDto,
+  UpdateBusinessInfoDto,
+  UpdateBusinessContactInfoDto,
 } from "@/decorators";
 import {
   logJsonError,
@@ -41,7 +53,6 @@ import {
 } from "@/helpers";
 import { randomUUID, webcrypto } from "crypto";
 import EventEmitter2 from "eventemitter2";
-import { ActivityService } from "../activity";
 import { ActivityEvents } from "@/events";
 import { Logger } from "winston";
 import { logger } from "@/logging";
@@ -55,6 +66,7 @@ export class AuthService {
   private readonly userModel: Model<IUser> = User;
   private readonly adminModel: Model<IAdmin> = Admin;
   private readonly merchantModel: Model<IMerchant> = Merchant;
+  private readonly businessModel: Model<IBusiness> = Business;
 
   // Services
   private readonly cacheService: CacheService;
@@ -123,11 +135,19 @@ export class AuthService {
   async refreshSession(user: IUser, userType: UserTypes, authId: string) {
     const authData = await this.cacheService.get<AuthData>(authId);
     // set new session details on cache
-    const { _id: userId, email, firstName, lastName, isSuperAdmin } = user;
+    const {
+      _id: userId,
+      businessId,
+      email,
+      firstName,
+      lastName,
+      isSuperAdmin,
+    } = user;
     await this.cacheService.set(
       authId,
       {
         userId,
+        businessId,
         email,
         firstName,
         lastName,
@@ -158,11 +178,19 @@ export class AuthService {
     const authId = `auth-id-${v4()}`;
     await this.expireSession(user.id);
     const ex = expire || config.jwt.ttl;
-    const { _id: userId, email, firstName, lastName, isSuperAdmin } = user;
+    const {
+      _id: userId,
+      businessId,
+      email,
+      firstName,
+      lastName,
+      isSuperAdmin,
+    } = user;
     await this.cacheService.set(
       authId,
       {
         userId,
+        businessId,
         email,
         firstName,
         lastName,
@@ -375,6 +403,46 @@ export class AuthService {
     return {
       message: `Email verified successfully`,
     };
+  }
+
+  async onboardBusiness(authData: AuthData, body: OnboardBusinessDto) {
+    const businessId = authData.businessId;
+    const ownerId = authData.userId;
+
+    const business = await this.businessModel.findOneAndUpdate(
+      { ownerId: new Types.ObjectId(ownerId), businessId },
+      {
+        ...body,
+        ownerId,
+        businessId,
+      },
+      { new: true, upsert: true }
+    );
+
+    await this.userModel.findByIdAndUpdate(authData.userId, {
+      isOnboarded: true,
+    });
+
+    return { message: "Business info updated", business };
+  }
+
+  async updateBusinessInfo(
+    authData: AuthData,
+    body: UpdateBusinessInfoDto | UpdateBusinessContactInfoDto
+  ) {
+    const business = await this.businessModel.findOneAndUpdate(
+      {
+        ownerId: new Types.ObjectId(authData.userId),
+        businessId: authData.businessId,
+      },
+      body,
+      { new: true }
+    );
+    if (!business)
+      return throwUnprocessableEntityError(
+        "You have not been properly onboarded. Please contact admin for more info"
+      );
+    return { business, message: "Business information updated" };
   }
 
   /**

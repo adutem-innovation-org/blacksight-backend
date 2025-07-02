@@ -3,6 +3,7 @@ import { Request } from "express";
 
 export interface AuthData {
   userId: string;
+  businessId: string;
   email: string;
   firstName: string;
   lastName: string;

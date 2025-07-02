@@ -6,10 +6,13 @@ import {
   GoogleLoginDto,
   LoginDto,
   NotificationDto,
+  OnboardBusinessDto,
   ResetPasswordDto,
   SavePushTokenDto,
   SetupPasswordDto,
   UpdateAddressDto,
+  UpdateBusinessContactInfoDto,
+  UpdateBusinessInfoDto,
   UpdateProfileDto,
   VerifyEmailDto,
 } from "@/decorators";
@@ -196,5 +199,38 @@ export class AuthController {
   ) => {
     const data = await this.authService.sendNotification(req.body);
     return sendSuccessResponse(res, {}, StatusCodes.NO_CONTENT);
+  };
+
+  onboardBusiness = async (
+    req: GenericReq<OnboardBusinessDto>,
+    res: Response
+  ) => {
+    const data = await this.authService.onboardBusiness(
+      req.authData!,
+      req.body
+    );
+    return sendSuccessResponse(res, data, StatusCodes.CREATED);
+  };
+
+  updateBusinessInfo = async (
+    req: GenericReq<UpdateBusinessInfoDto>,
+    res: Response
+  ) => {
+    const data = await this.authService.updateBusinessInfo(
+      req.authData!,
+      req.body
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  updateBusinessContactInfo = async (
+    req: GenericReq<UpdateBusinessContactInfoDto>,
+    res: Response
+  ) => {
+    const data = await this.authService.updateBusinessInfo(
+      req.authData!,
+      req.body
+    );
+    return sendSuccessResponse(res, data);
   };
 }

@@ -20,6 +20,9 @@ import {
   SetupPasswordDto,
   UpdateProfileDto,
   UpdateAddressDto,
+  OnboardBusinessDto,
+  UpdateBusinessInfoDto,
+  UpdateBusinessContactInfoDto,
 } from "@/decorators";
 import { AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -177,4 +180,28 @@ authRouter.post(
   permissionRequirement([UserTypes.ADMIN]),
   validateDTO(NotificationDto),
   authController.sendNotification
+);
+
+authRouter.post(
+  "/user/business/onboard",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(OnboardBusinessDto),
+  authController.onboardBusiness
+);
+
+authRouter.patch(
+  "/user/update/business/info",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(UpdateBusinessInfoDto),
+  authController.updateBusinessInfo
+);
+
+authRouter.patch(
+  "/user/update/business/contact/info",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(UpdateBusinessContactInfoDto),
+  authController.updateBusinessContactInfo
 );

@@ -27,6 +27,7 @@ export interface IUser extends Document<Types.ObjectId> {
   lastLogin: Date;
   isActive: boolean;
   isEmailVerified: boolean;
+  isOnboarded: boolean;
   google: string;
   imageUrl: string;
   isSuperAdmin: boolean;
@@ -94,6 +95,10 @@ export const UserSchema: Schema<IUser> = new Schema(
       type: Boolean,
       default: false,
     },
+    isOnboarded: {
+      type: Boolean,
+      default: false,
+    },
     google: {
       type: String,
     },
@@ -158,6 +163,13 @@ UserSchema.index({
   email: "text",
   firstName: "text",
   lastName: "text",
+});
+
+UserSchema.virtual("businessInfo", {
+  ref: "businesses",
+  localField: "businessId",
+  foreignField: "businessId",
+  justOne: true,
 });
 
 /**
