@@ -73,7 +73,7 @@ export class OnboardBusinessDto {
   address!: string;
 
   @IsNotEmpty({ message: "Please specify your business's industry" })
-  @IsString({ message: "Your business industry is not supportted" })
+  @IsString({ message: "Your business industry is not supported" })
   industry!: string;
 
   @IsNotEmpty({

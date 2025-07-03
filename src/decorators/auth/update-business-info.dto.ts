@@ -6,16 +6,16 @@ export class UpdateBusinessInfoDto {
   name!: string;
 
   @IsOptional()
-  @IsUrl({}, { message: "Business website must be a valid url" })
+  @IsUrl({}, { message: "Your business website must be a valid url" })
   website!: string;
 
   @IsOptional()
-  @IsString({ message: "Please specify the type of service you offer" })
-  industry!: string;
+  @IsString({ message: "Your business address must be string" })
+  address!: string;
 
   @IsOptional()
-  @IsString({ message: "Business address must be string" })
-  address!: string;
+  @IsString({ message: "Your business industry is not supported" })
+  industry!: string;
 }
 
 export class UpdateBusinessContactInfoDto {

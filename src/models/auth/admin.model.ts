@@ -25,6 +25,9 @@ AdminSchema.remove("businessId");
 
 AdminSchema.clearIndexes();
 
+AdminSchema.set("toJSON", { virtuals: false });
+AdminSchema.set("toObject", { virtuals: false });
+
 // AdminSchema.pre<IAdmin>("save", async function (next) {
 //   if (!this.isModified("hash")) {
 //     return next();

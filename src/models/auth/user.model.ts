@@ -172,6 +172,15 @@ UserSchema.virtual("businessInfo", {
   justOne: true,
 });
 
+function autoPopulate(this: IUser, next: Function) {
+  this.populate("businessInfo");
+  next();
+}
+
+UserSchema.pre("find", autoPopulate);
+UserSchema.pre("findOne", autoPopulate);
+UserSchema.pre("findOneAndUpdate", autoPopulate);
+
 /**
  * Setup document method for password encryption
  * @param password
