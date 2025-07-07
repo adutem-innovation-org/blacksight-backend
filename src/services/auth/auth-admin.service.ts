@@ -47,8 +47,7 @@ export class AuthAdminService {
     }
     const users = await this.userPagination.paginate(
       {
-        ...query,
-        deletedAt: { $exists: false },
+        query: { ...query, deletedAt: { $exists: false } },
         projections: [
           "id",
           "firstName",
@@ -77,7 +76,9 @@ export class AuthAdminService {
   async getUsersAnalytics(auth: AuthData) {
     const result = await Promise.allSettled([
       this.userModel.countDocuments(),
-      this.userModel.countDocuments({ isSuspended: false }),
+      this.userModel.countDocuments({
+        $or: [{ isSuspended: false }, { isSuspended: { $exist: false } }],
+      }),
     ]);
 
     const totalUsers = result[0].status === "fulfilled" ? result[0].value : 0;
@@ -114,6 +115,29 @@ export class AuthAdminService {
       },
       ["id", "firstName", "lastName", "email", "lastLogin", "isActive"]
     );
+  }
+
+  async getAdminsAnalytics(auth: AuthData) {
+    const result = await Promise.allSettled([
+      this.adminModel.countDocuments(),
+      this.adminModel.countDocuments({
+        $or: [{ isSuspended: false }, { isSuspended: { $exists: false } }],
+      }),
+    ]);
+
+    console.log(result);
+
+    const totalAdmins = result[0].status === "fulfilled" ? result[0].value : 0;
+    const activeAdmins = result[1].status === "fulfilled" ? result[1].value : 0;
+    const suspendedAdmins = totalAdmins - activeAdmins;
+
+    return {
+      data: {
+        totalAdmins,
+        activeAdmins,
+        suspendedAdmins,
+      },
+    };
   }
 
   async suspendUser(auth: AuthData, body: SuspendUserDto) {

@@ -37,6 +37,11 @@ export class AuthAdminController {
     return sendSuccessResponse(res, data);
   };
 
+  getAdminAnalytics = async (req: Request, res: Response) => {
+    const data = await this.authAdminService.getAdminsAnalytics(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
   getSuspensions = async (req: Request, res: Response) => {
     const data = await this.authAdminService.getAllSuspensions(req.query);
     return sendSuccessResponse(res, data);

@@ -160,6 +160,13 @@ authRouter.get(
   authAdminController.getAdmins
 );
 
+authRouter.get(
+  "/admin/admin-analytics",
+  validateToken,
+  permissionRequirement([UserTypes.ADMIN]),
+  authAdminController.getAdminAnalytics
+);
+
 authRouter.post(
   "/admin/create-admin",
   validateToken,
