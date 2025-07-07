@@ -66,6 +66,17 @@ KnowledgeBaseSchema.virtual("connectedBots", {
   },
 });
 
+KnowledgeBaseSchema.virtual("owner", {
+  ref: "users",
+  localField: "businessId",
+  foreignField: "_id",
+  justOne: true,
+  options: {
+    select: "firstName lastName email isSuspended",
+    lean: true,
+  },
+});
+
 KnowledgeBaseSchema.plugin(mongooseLeanVirtuals);
 
 export const KnowledgeBase: Model<IKnowledgeBase> = model<IKnowledgeBase>(

@@ -10,6 +10,7 @@ import path from "path";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import {
+  isAdmin,
   isOwnerUser,
   isSuperAdmin,
   logJsonError,
@@ -242,11 +243,15 @@ export class KnowledgeBaseService {
 
   async getAllKnowledgeBase(auth: AuthData) {
     let query: Record<string, any> = {};
+    const populate = ["connectedBots"];
     if (auth.userType === UserTypes.USER) {
       query.businessId = new Types.ObjectId(auth.userId);
     }
+    if (isAdmin(auth)) {
+      populate.push("owner");
+    }
     return await this.knowledgeBasePaginationService.paginate(
-      { query, projections: { chunks: 0 }, populate: ["connectedBots"] },
+      { query, projections: { chunks: 0 }, populate },
       []
     );
   }
