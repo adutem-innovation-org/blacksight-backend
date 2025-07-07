@@ -14,3 +14,4 @@ export * from "./update-profile.dto";
 export * from "./update-profile-image.dto";
 export * from "./onboard.dto";
 export * from "./update-business-info.dto";
+export * from "./admin";

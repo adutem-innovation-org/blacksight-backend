@@ -24,13 +24,14 @@ import {
   UpdateBusinessInfoDto,
   UpdateBusinessContactInfoDto,
 } from "@/decorators";
-import { AuthController } from "@/controllers";
+import { AuthAdminController, AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
 import { googleLoginMiddleware } from "@/services";
 import { IMAGE_MIMETYPES } from "@/constants";
 
 export const authRouter = createRouter();
 const authController = AuthController.getInstance();
+const authAdminController = AuthAdminController.getInstance();
 
 authRouter.post(
   "/admin/login",
@@ -142,14 +143,21 @@ authRouter.get(
   "/admin/get-users",
   validateToken,
   permissionRequirement([UserTypes.ADMIN]),
-  authController.getUsers
+  authAdminController.getUsers
+);
+
+authRouter.get(
+  "/admin/user-analytics",
+  validateToken,
+  permissionRequirement([UserTypes.ADMIN]),
+  authAdminController.getUserAnalytics
 );
 
 authRouter.get(
   "/admin/get-admins",
   validateToken,
   permissionRequirement([UserTypes.ADMIN]),
-  authController.getAdmins
+  authAdminController.getAdmins
 );
 
 authRouter.post(
@@ -158,6 +166,13 @@ authRouter.post(
   permissionRequirement([UserTypes.ADMIN]),
   validateDTO(CreateAuthDto),
   authController.createAdmin
+);
+
+authRouter.get(
+  "/admin/get-suspensions",
+  validateToken,
+  permissionRequirement([UserTypes.ADMIN]),
+  authAdminController.getSuspensions
 );
 
 authRouter.post(

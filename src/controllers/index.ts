@@ -7,3 +7,4 @@ export * from "./meeting-provider.controller";
 export * from "./appointment.controller";
 export * from "./notification.controller";
 export * from "./api-key.controller";
+export * from "./auth-admin.controller";

@@ -26,6 +26,9 @@ export interface IUser extends Document<Types.ObjectId> {
   deletedAt: Date;
   lastLogin: Date;
   isActive: boolean;
+  isSuspended: boolean;
+  suspensionReason?: string;
+  suspensionId?: Types.ObjectId;
   isEmailVerified: boolean;
   isOnboarded: boolean;
   google: string;
@@ -90,6 +93,17 @@ export const UserSchema: Schema<IUser> = new Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    suspensionReason: {
+      type: String,
+    },
+    suspensionId: {
+      type: Schema.Types.ObjectId,
+      ref: "suspension-logs",
     },
     isEmailVerified: {
       type: Boolean,
