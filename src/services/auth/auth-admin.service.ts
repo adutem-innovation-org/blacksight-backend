@@ -1,5 +1,6 @@
 import { GetUserAltDto, LiftSuspensionDto, SuspendUserDto } from "@/decorators";
 import {
+  aggregatePaginate,
   isAdmin,
   throwForbiddenError,
   throwNotFoundError,
@@ -45,32 +46,72 @@ export class AuthAdminService {
     if (query.id) {
       query._id = new Types.ObjectId(query.id);
     }
-    const users = await this.userPagination.paginate(
-      {
-        query: { ...query, deletedAt: { $exists: false } },
-        projections: [
-          "id",
-          "firstName",
-          "lastName",
-          "email",
-          "lastLogin",
-          "isActive",
-          "isSuspended",
-          "createdAt",
-        ],
+    // const users = await this.userPagination.paginate(
+    //   {
+    //     query: { ...query, deletedAt: { $exists: false } },
+    //     projections: [
+    //       "id",
+    //       "firstName",
+    //       "lastName",
+    //       "email",
+    //       "lastLogin",
+    //       "isActive",
+    //       "isSuspended",
+    //       "createdAt",
+    //     ],
+    //   },
+    //   [
+    //     "_id",
+    //     "firstName",
+    //     "lastName",
+    //     "email",
+    //     "lastLogin",
+    //     "isActive",
+    //     "isSuspended",
+    //     "createdAt",
+    //   ]
+    // );
+    // return users;
+
+    if (query.id) {
+      query._id = new Types.ObjectId(query.id);
+    }
+
+    const result = await aggregatePaginate(this.userModel, {
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 20,
+      match: {
+        ...query,
+        deletedAt: { $exists: false },
       },
-      [
-        "_id",
-        "firstName",
-        "lastName",
-        "email",
-        "lastLogin",
-        "isActive",
-        "isSuspended",
-        "createdAt",
-      ]
-    );
-    return users;
+      project: {
+        _id: 1,
+        firstName: 1,
+        lastName: 1,
+        email: 1,
+        lastLogin: 1,
+        isActive: 1,
+        isSuspended: 1,
+        createdAt: 1,
+        totalBots: 1,
+        totalKnowledgeBases: 1,
+      },
+      sort: { createdAt: -1 },
+      lookups: {
+        bots: {
+          from: "bots",
+          localField: "_id",
+          foreignField: "businessId",
+        },
+        knowledgeBases: {
+          from: "knowledge-bases",
+          localField: "_id",
+          foreignField: "businessId",
+        },
+      },
+    });
+
+    return result;
   }
 
   async getUsersAnalytics(auth: AuthData) {
