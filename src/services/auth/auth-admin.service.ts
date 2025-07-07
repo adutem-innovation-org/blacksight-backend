@@ -118,7 +118,7 @@ export class AuthAdminService {
     const result = await Promise.allSettled([
       this.userModel.countDocuments(),
       this.userModel.countDocuments({
-        $or: [{ isSuspended: false }, { isSuspended: { $exist: false } }],
+        $or: [{ isSuspended: false }, { isSuspended: { $exists: false } }],
       }),
     ]);
 
