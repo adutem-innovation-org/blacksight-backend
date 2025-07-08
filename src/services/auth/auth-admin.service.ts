@@ -119,18 +119,24 @@ export class AuthAdminService {
       this.userModel.countDocuments(),
       this.userModel.countDocuments({
         $or: [{ isSuspended: false }, { isSuspended: { $exists: false } }],
+        deletedAt: { $exists: false },
       }),
+      this.userModel.countDocuments({ isSuspended: true }),
+      this.userModel.countDocuments({ deletedAt: { $exists: true } }),
     ]);
 
     const totalUsers = result[0].status === "fulfilled" ? result[0].value : 0;
     const activeUsers = result[1].status === "fulfilled" ? result[1].value : 0;
-    const suspendedUsers = totalUsers - activeUsers;
+    const suspendedUsers =
+      result[2].status === "fulfilled" ? result[2].value : 0;
+    const deletedUsers = result[3].status === "fulfilled" ? result[3].value : 0;
 
     return {
       data: {
         totalUsers,
         activeUsers,
         suspendedUsers,
+        deletedUsers,
       },
     };
   }
