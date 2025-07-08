@@ -17,7 +17,7 @@ appointmentRouter.get("/analytics", appointmentController.getAnalytics);
 
 appointmentRouter.get(
   "/all",
-  permissionRequirement([UserTypes.USER]),
+  permissionRequirement([UserTypes.USER, UserTypes.ADMIN]),
   appointmentController.getAllAppointments
 );
 
