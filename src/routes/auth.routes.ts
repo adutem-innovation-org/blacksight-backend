@@ -23,6 +23,7 @@ import {
   OnboardBusinessDto,
   UpdateBusinessInfoDto,
   UpdateBusinessContactInfoDto,
+  SuspendUserDto,
 } from "@/decorators";
 import { AuthAdminController, AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -180,6 +181,21 @@ authRouter.get(
   validateToken,
   permissionRequirement([UserTypes.ADMIN]),
   authAdminController.getSuspensions
+);
+
+authRouter.post(
+  "/admin/suspend/user/:id",
+  validateToken,
+  permissionRequirement([UserTypes.ADMIN]),
+  validateDTO(SuspendUserDto),
+  authAdminController.suspendUser
+);
+
+authRouter.post(
+  "/admin/lift-suspension/user/:id",
+  validateToken,
+  permissionRequirement([UserTypes.ADMIN]),
+  authAdminController.liftUserSuspension
 );
 
 authRouter.post(

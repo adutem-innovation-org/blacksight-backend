@@ -50,18 +50,16 @@ export class AuthAdminController {
   suspendUser = async (req: GenericReq<SuspendUserDto>, res: Response) => {
     const data = await this.authAdminService.suspendUser(
       req.authData!,
-      req.body
+      req.body,
+      req.params.id
     );
     return sendSuccessResponse(res, data);
   };
 
-  liftUserSuspension = async (
-    req: GenericReq<LiftSuspensionDto>,
-    res: Response
-  ) => {
+  liftUserSuspension = async (req: Request, res: Response) => {
     const data = await this.authAdminService.liftUserSuspension(
       req.authData!,
-      req.body
+      req.params.id
     );
     return sendSuccessResponse(res, data);
   };

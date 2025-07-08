@@ -181,29 +181,29 @@ export class AuthAdminService {
     };
   }
 
-  async suspendUser(auth: AuthData, body: SuspendUserDto) {
+  async suspendUser(auth: AuthData, body: SuspendUserDto, userId: string) {
     if (!isAdmin(auth))
       return throwForbiddenError("You cannot carry out this operation");
 
     // Check if an existing suspension exist
     const suspension = await this.suspensionLogModel.findOne({
-      userId: new Types.ObjectId(body.userId),
+      userId: new Types.ObjectId(userId),
       liftedOn: { $exists: false },
     });
 
     if (suspension)
       return throwUnprocessableEntityError("User has an unlifted suspension");
 
+    console.log(userId);
+
     // Find the said user in the database
-    const user = await this.userModel
-      .findById(body.userId)
-      .select(GetUserAltDto);
+    const user = await this.userModel.findById(userId).select(GetUserAltDto);
 
     if (!user) return throwNotFoundError("User not found");
 
     // Create a new suspension for the user
     const newSuspension = await this.suspensionLogModel.create({
-      userId: body.userId,
+      userId,
       role: user.userType,
       reason: body.reason,
       suspensionDate: new Date(),
@@ -219,14 +219,12 @@ export class AuthAdminService {
     return { user, message: "User suspended" };
   }
 
-  async liftUserSuspension(auth: AuthData, body: LiftSuspensionDto) {
+  async liftUserSuspension(auth: AuthData, userId: string) {
     if (!isAdmin(auth))
       return throwForbiddenError("You cannot carry out this operation");
 
     // Find the said user in the data
-    const user = await this.userModel
-      .findById(body.userId)
-      .select(GetUserAltDto);
+    const user = await this.userModel.findById(userId).select(GetUserAltDto);
 
     if (!user) return throwNotFoundError("User not found");
 
