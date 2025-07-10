@@ -186,8 +186,16 @@ UserSchema.virtual("businessInfo", {
   justOne: true,
 });
 
+UserSchema.virtual("wallet", {
+  ref: "wallets",
+  localField: "_id",
+  foreignField: "userId",
+  justOne: true,
+});
+
 function autoPopulate(this: IUser, next: Function) {
   this.populate("businessInfo");
+  this.populate("wallet");
   next();
 }
 
