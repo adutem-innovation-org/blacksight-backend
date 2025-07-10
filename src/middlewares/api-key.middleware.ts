@@ -27,6 +27,10 @@ export const verifyApiKey = async (
     return throwUnauthorizedError("API key has expired");
   }
 
+  if (keyRecord.disabled || keyRecord.revoked) {
+    return throwUnauthorizedError("API key is disabled or revoked");
+  }
+
   // Optionally attach owner to request context
   req.apiKeyOwnerId = keyRecord.ownerId.toString();
 
