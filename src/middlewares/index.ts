@@ -8,3 +8,5 @@ export * from "./route-not-found";
 export * from "./validate-jwt";
 export * from "./cache.middleware";
 export * from "./file-validator";
+export * from "./mcp.middleware";
+export * from "./api-key.middleware";
