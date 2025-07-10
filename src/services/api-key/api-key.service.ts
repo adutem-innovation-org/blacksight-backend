@@ -204,4 +204,8 @@ export class ApiKeyService {
     const hashed = createHash("sha256").update(raw).digest("hex");
     return { raw, hashed };
   }
+
+  async getApiKey(hash: string) {
+    return await this.apiKeyModel.findOne({ key: hash });
+  }
 }
