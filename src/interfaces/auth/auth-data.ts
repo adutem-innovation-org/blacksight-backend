@@ -10,7 +10,6 @@ export interface AuthData {
   exp: number;
   pushToken?: string;
   access: string[];
-  pin: string;
   authId: string;
   userType: UserTypes;
   isSuperAdmin: boolean;
