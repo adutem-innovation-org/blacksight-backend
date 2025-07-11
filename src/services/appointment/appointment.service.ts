@@ -2,6 +2,7 @@ import {
   AppointmentParam,
   AppointmentStatus,
   Events,
+  TTL,
   UserTypes,
 } from "@/enums";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/helpers";
 import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
 import { Appointment, IAppointment } from "@/models";
-import { eventEmitter, PaginationService } from "@/utils";
+import { CacheService, eventEmitter, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 import {
   startOfDay,
@@ -36,9 +37,11 @@ export class AppointmentService {
 
   private readonly appointmentModel: Model<IAppointment> = Appointment;
   private readonly paginationService: PaginationService<IAppointment>;
+  private readonly cacheService: CacheService;
 
   constructor() {
     this.paginationService = new PaginationService(this.appointmentModel);
+    this.cacheService = CacheService.getInstance();
     BookingEventService.getInstance();
     this._setupEventListeners();
   }
@@ -191,6 +194,49 @@ export class AppointmentService {
     } catch (error) {
       AppointmentService.jsonErrorLogger(error);
     }
+  }
+
+  /**
+   * Create a session appointment context
+   * @param conversationId string
+   * @returns
+   */
+  // Session id can be used interchangably with conversationId
+  async getOrCreateAppointmentContext(
+    conversationId: string
+  ): Promise<{ appointmentId: string; appointmentCacheKey: string }> {
+    // Get current appointment context
+    const appointmentCacheKey = `appointment-id-${conversationId}`;
+    let appointmentId = (await this.cacheService.get(
+      appointmentCacheKey
+    )) as string;
+    if (!appointmentId) {
+      appointmentId = new Types.ObjectId().toString();
+      await this.cacheService.set(
+        appointmentCacheKey,
+        appointmentId,
+        TTL.IN_30_MINUTES
+      );
+    }
+    return { appointmentId, appointmentCacheKey };
+  }
+
+  async getContextAppointment(appointmentId: string) {
+    return this.getConversationAppointment(appointmentId);
+  }
+
+  async constructAppoinmentAsContext(appointmentId: string) {
+    // Get the appointment data
+    const result = await this.getConversationAppointment(appointmentId);
+
+    const currentAppointmentData =
+      result?.isRecent && result.appointment
+        ? `Current appointment data collected: ${JSON.stringify(
+            result.appointment
+          )}`
+        : "Current appointment data collected: None";
+
+    return currentAppointmentData;
   }
 
   async analytics(auth: AuthData) {

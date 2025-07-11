@@ -22,13 +22,16 @@ import {
 import { Pinecone } from "@pinecone-database/pinecone";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { BotStatus, Events, KnowledgeBaseSources, UserTypes } from "@/enums";
+import { KnowledgeBaseSources, UserTypes } from "@/enums";
 import { Logger } from "winston";
 import EventEmitter2 from "eventemitter2";
 
 export class KnowledgeBaseService {
   private static instance: KnowledgeBaseService;
-  static logger: Logger = logger;
+  // Helpers
+  private static readonly logJsonError = logJsonError;
+  private static readonly logger: Logger = logger;
+
   static readonly eventEmitter: EventEmitter2 = eventEmitter;
 
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
@@ -183,34 +186,25 @@ export class KnowledgeBaseService {
     }
   }
 
-  // queryKnowledgeBase = async (
-  //   businessId: string,
-  //   documentId: string,
-  //   userQuery: string
-  // ) => {
-  //   const pineconeIndex = this.pinecone.Index("knowledge-base");
+  async extractKnowledgeBase(
+    bot: IBot,
+    businessId: string,
+    userQuery: string
+  ): Promise<string> {
+    try {
+      const documentIds = (bot.knowledgeBases || [])
+        .map((kb) => kb.documentId?.toString())
+        .filter(Boolean);
 
-  //   const embeddingResponse = await this.openai.embeddings.create({
-  //     model: "text-embedding-3-small",
-  //     input: userQuery,
-  //   });
+      if (documentIds.length === 0) return "";
 
-  //   const queryEmbedding = embeddingResponse.data[0].embedding;
-
-  //   const searchResults = await pineconeIndex.query({
-  //     vector: queryEmbedding,
-  //     topK: 3,
-  //     includeMetadata: true,
-  //     filter: {
-  //       businessId,
-  //       documentId,
-  //     },
-  //   });
-
-  //   return searchResults.matches
-  //     .map((match) => match?.metadata?.text || "")
-  //     .join("\n\n");
-  // };
+      return await this.queryKnowledgeBases(businessId, documentIds, userQuery);
+    } catch (error) {
+      KnowledgeBaseService.logger.error("Unable to extract knowledge base");
+      KnowledgeBaseService.logJsonError(error);
+      return "";
+    }
+  }
 
   queryKnowledgeBases = async (
     businessId: string,

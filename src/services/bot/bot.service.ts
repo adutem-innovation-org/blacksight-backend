@@ -39,6 +39,7 @@ import {
   AudioConverter,
   CacheService,
   eventEmitter,
+  McpService,
   PaginationService,
 } from "@/utils";
 import { Model, Types } from "mongoose";
@@ -75,17 +76,17 @@ export class BotService {
 
   // Services
   private readonly botPaginationService: PaginationService<IBot>;
-  private readonly knowledgeBaseService: KnowledgeBaseService;
   private readonly conversationService: ConversationService;
   private readonly appointmentService: AppointmentService;
+  private readonly mcpService: McpService;
   private readonly cacheService: CacheService;
   private readonly openai: OpenAI;
 
   constructor() {
     this.botPaginationService = new PaginationService(this.botModel);
-    this.knowledgeBaseService = KnowledgeBaseService.getInstace();
     this.conversationService = ConversationService.getInstance();
     this.appointmentService = AppointmentService.getInstance();
+    this.mcpService = McpService.getInstance();
     this.cacheService = CacheService.getInstance();
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
@@ -393,93 +394,35 @@ export class BotService {
     const { userQuery, botId, conversationId } = body;
     const businessId = authData.userId.toString();
 
-    // Get bot configuration
-    let bot: IBot | null = await this.cacheService.get(botId);
-    console.log("Bot data from cache >> ", bot);
-    if (!bot) {
-      bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
-      if (!bot) {
-        return throwUnprocessableEntityError("Unconfigured bot referenced");
-      }
-      await this.cacheService.set(botId, bot, TTL.IN_10_MINUTES);
-    }
+    const bot = await this.getBotConfig(botId);
 
     // Get current appointment context
-    const appointmentCacheKey = `appointment-id-${conversationId}`;
-    let appointmentId = (await this.cacheService.get(
-      appointmentCacheKey
-    )) as string;
-
-    console.log("AppointmentId from cache >> ", appointmentId);
-    if (!appointmentId) {
-      appointmentId = new Types.ObjectId().toString();
-      await this.cacheService.set(
-        appointmentCacheKey,
-        appointmentId,
-        TTL.IN_30_MINUTES
+    const { appointmentId, appointmentCacheKey } =
+      await this.appointmentService.getOrCreateAppointmentContext(
+        conversationId
       );
-    }
 
-    // Get or create conversation
-    let conversation = await this.conversationService.getOrCreateConversation(
+    // Build context with MCP
+    const {
+      messages,
+      summaries,
+      customInstruction,
+      extractedKB,
+      unsummarizedMessages,
+    } = await this.mcpService.buildMCPContext({
+      appointmentId,
+      bot,
+      businessId,
       conversationId,
-      botId,
-      businessId
-    );
-
-    // Get the appointment data
-    const result = await this.appointmentService.getConversationAppointment(
-      // conversationId
-      appointmentId
-    );
-
-    console.log(result);
-
-    const currentAppointmentData =
-      result?.isRecent && result.appointment
-        ? `Current appointment data collected: ${JSON.stringify(
-            result.appointment
-          )}`
-        : "Current appointment data collected: None";
-
-    console.log(currentAppointmentData);
-
-    // Process conversation with optimized context
-    const context = await this.conversationService.processConversationOptimized(
-      conversation
-    );
-
-    // Save user message
-    // ✅ This approach was reversed because we don't want to summarize the message the user just sent... Rather we want to summarize only past conversation if they are up to the required threshold
-    conversation = await this.conversationService.saveUserMessage(
-      conversation,
-      userQuery
-    );
-
-    // Extract knowledge base in parallel
-    const kbPromise = this.extractKnowledgeBase(bot, businessId, userQuery);
-    const extractedKB = await kbPromise;
-
-    // Get custom instructions
-    const customInstruction =
-      bot.instructions ?? "No custom instruction from the business.";
+      userQuery,
+    });
 
     // Detect intent with function calling
     const intentResult =
-      await this.conversationService.detectUserIntentWithFunctions({
-        ...context,
-        customInstruction,
-        extractedKB,
-        userQuery,
-        currentAppointmentData,
-      });
-
-    console.log(intentResult);
+      await this.conversationService.detectUserIntentWithFunctions(messages);
 
     // Handle function calls if present
     if (intentResult.functionCalls && intentResult.functionCalls.length > 0) {
-      console.log("Function call detected");
-      console.log(intentResult.functionCalls);
       await this.handleFunctionCalls(
         intentResult.functionCalls,
         businessId,
@@ -491,6 +434,63 @@ export class BotService {
     }
 
     // Handle cases where the function call is not called but that the intent is detected
+    await this.intentHandler(
+      intentResult,
+      businessId,
+      conversationId,
+      appointmentId,
+      botId,
+      bot,
+      appointmentCacheKey
+    );
+
+    const shouldFallbackToContext =
+      !intentResult.message || intentResult.message.length < 20; // e.g., "Okay noted." isn't helpful
+
+    let botResponse;
+
+    if (shouldFallbackToContext) {
+      // For general inquiries, generate a more contextual response
+      const lastAction =
+        intentActionsMapper[intentResult.intent as Intent] ||
+        intentActionsMapper[Intent.GENERAL_INQUIRY];
+
+      const prompt = this.mcpService.createContextualPrompt(
+        summaries,
+        extractedKB,
+        customInstruction,
+        lastAction
+      );
+
+      const messages = this.mcpService.buildMessages({
+        prompt,
+        userQuery,
+        unsummarizedMessages,
+      });
+
+      botResponse = await this.conversationService.generateContextualResponse({
+        intentResult,
+        messages,
+      });
+    } else {
+      botResponse = { role: RoleEnum.ASSISTANT, content: intentResult.message };
+    }
+
+    // Save bot response
+    await this.conversationService.saveBotResponse(conversationId, botResponse);
+
+    return { data: botResponse };
+  }
+
+  private async intentHandler(
+    intentResult: any,
+    businessId: string,
+    conversationId: string,
+    appointmentId: string,
+    botId: string,
+    bot: IBot,
+    appointmentCacheKey: string
+  ) {
     if (intentResult.intent !== Intent.GENERAL_INQUIRY) {
       switch (intentResult.intent) {
         case Intent.BOOK_APPOINTMENT:
@@ -569,39 +569,19 @@ export class BotService {
           break;
       }
     }
+  }
 
-    const shouldFallbackToContext =
-      !intentResult.message || intentResult.message.length < 20; // e.g., "Okay noted." isn't helpful
-
-    let botResponse;
-
-    if (shouldFallbackToContext) {
-      botResponse = await this.conversationService.generateContextualResponse({
-        context,
-        extractedKB,
-        customInstruction,
-        intentResult,
-        userQuery,
-      });
-    } else {
-      botResponse = { role: RoleEnum.ASSISTANT, content: intentResult.message };
+  async getBotConfig(botId: string) {
+    // Get bot configuration
+    let bot: IBot | null = await this.cacheService.get(botId);
+    if (!bot) {
+      bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
+      if (!bot) {
+        return throwUnprocessableEntityError("Unconfigured bot referenced");
+      }
+      await this.cacheService.set(botId, bot, TTL.IN_10_MINUTES);
     }
-
-    // Generate contextual response
-    // const botResponse =
-    //   await this.conversationService.generateContextualResponse({
-    //     context,
-    //     extractedKB,
-    //     customInstruction,
-    //     intentResult,
-    //     userQuery,
-    //   });
-
-    // Save bot response
-    conversation.messages.push(botResponse);
-    await conversation.save();
-
-    return { data: botResponse };
+    return bot;
   }
 
   // private async extractKnowledgeBase(
@@ -622,29 +602,6 @@ export class BotService {
   //     return "";
   //   }
   // }
-  private async extractKnowledgeBase(
-    bot: IBot,
-    businessId: string,
-    userQuery: string
-  ): Promise<string> {
-    try {
-      const documentIds = (bot.knowledgeBases || [])
-        .map((kb) => kb.documentId?.toString())
-        .filter(Boolean);
-
-      if (documentIds.length === 0) return "";
-
-      return await this.knowledgeBaseService.queryKnowledgeBases(
-        businessId,
-        documentIds,
-        userQuery
-      );
-    } catch (error) {
-      BotService.logger.error("Unable to extract knowledge base");
-      BotService.logJsonError(error);
-      return "";
-    }
-  }
 
   private async handleFunctionCalls(
     functionCalls: any[],
