@@ -8,3 +8,4 @@ export * from "./appointment.controller";
 export * from "./notification.controller";
 export * from "./api-key.controller";
 export * from "./auth-admin.controller";
+export * from "./settings.controller";

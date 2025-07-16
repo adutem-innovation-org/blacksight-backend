@@ -4,3 +4,4 @@ export * from "./knowledge-base";
 export * from "./booking-provider";
 export * from "./bot";
 export * from "./appointment";
+export * from "./settings";

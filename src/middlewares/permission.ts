@@ -19,3 +19,13 @@ export const permissionRequirement = (allowedUserTypes: UserTypes[] = []) => {
     throwUnauthorizedError("Unauthorized");
   };
 };
+
+export const adminAccess =
+  (superAdminOnly = false) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    if (req.authData?.userType !== UserTypes.ADMIN)
+      return throwForbiddenError("Forbidden");
+    if (superAdminOnly && !req.authData?.isSuperAdmin)
+      return throwForbiddenError("Forbidden");
+    return next();
+  };

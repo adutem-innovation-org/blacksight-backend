@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { logger } from "@/logging";
 import ms, { StringValue } from "ms";
+import { CurrencyEnum } from "@/enums";
 
 // Get current node environment
 const env = process.env.NODE_ENV || "development";
@@ -72,5 +73,16 @@ export const config = {
   isProduction: process.env.ENVIRONMENT === "production",
   encryption: {
     apiKey: process.env.API_KEY_ENCRYPTION_KEY!,
+  },
+  settings: {
+    costPerRU: Number.parseFloat(process.env.COST_PER_RU!),
+    currency: process.env.CURRENCY! || CurrencyEnum.DOLLAR,
+    costPerToken: Number.parseFloat(process.env.COST_PER_TOKEN!),
+    costPerWU: Number.parseFloat(process.env.COST_PER_WU!),
+    markUpPercent: Number.parseFloat(process.env.MARK_UP_PERCENT!),
+    costPerStorageGB: Number.parseFloat(process.env.COST_PER_STORAGE_GB!),
+    storageMarkUpPercent: Number.parseFloat(
+      process.env.STORAGE_MARK_UP_PERCENT!
+    ),
   },
 };

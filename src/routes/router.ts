@@ -8,6 +8,7 @@ import { meetingProviderRouter } from "./meeting-provider.routes";
 import { appointmentRouter } from "./appointment.routes";
 import { notificationRouter } from "./notification.routes";
 import { apiKeyRouter } from "./api-key.routes";
+import { settingsRouter } from "./settings.routes";
 
 export const appRouter = createRouter();
 
@@ -20,3 +21,4 @@ appRouter.use("/meeting-provider", meetingProviderRouter);
 appRouter.use("/reminder", reminderRouter);
 appRouter.use("/notification", notificationRouter);
 appRouter.use("/api-key", apiKeyRouter);
+appRouter.use("/settings", settingsRouter);
