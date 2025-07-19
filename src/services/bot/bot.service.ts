@@ -43,7 +43,6 @@ import {
   PaginationService,
 } from "@/utils";
 import { Model, Types } from "mongoose";
-import { KnowledgeBaseService } from "../knowledge-base";
 import { ConversationService } from "./conversation.service";
 import OpenAI from "openai";
 import { config } from "@/config";
@@ -57,13 +56,15 @@ import ffmpeg from "fluent-ffmpeg";
 import { AppointmentService } from "../appointment";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
 import { encoding_for_model } from "@dqbd/tiktoken";
+import { TokenizationService } from "../tokenization";
+import { WalletService } from "../wallet";
 const enc = encoding_for_model("gpt-4"); //
 
 export class BotService {
   private static instance: BotService;
 
   // Helpers
-  private readonly eventEmitter: EventEmitter2 = eventEmitter;
+  private static readonly eventEmitter: EventEmitter2 = eventEmitter;
   private static readonly logJsonError = logJsonError;
   private static readonly logger: Logger = logger;
 
@@ -78,6 +79,8 @@ export class BotService {
   private readonly botPaginationService: PaginationService<IBot>;
   private readonly conversationService: ConversationService;
   private readonly appointmentService: AppointmentService;
+  private readonly tokenizationService: TokenizationService;
+  private readonly walletService: WalletService;
   private readonly mcpService: McpService;
   private readonly cacheService: CacheService;
   private readonly openai: OpenAI;
@@ -88,6 +91,8 @@ export class BotService {
     this.appointmentService = AppointmentService.getInstance();
     this.mcpService = McpService.getInstance();
     this.cacheService = CacheService.getInstance();
+    this.tokenizationService = TokenizationService.getInstance();
+    this.walletService = WalletService.getInstance();
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
 
@@ -390,7 +395,7 @@ export class BotService {
     return { data: newMessage, conversationId: conversation.conversationId };
   }
 
-  async askChatbot(authData: AuthData, body: AskChatbotDto) {
+  async chatInPlayground(authData: AuthData, body: AskChatbotDto) {
     const { userQuery, botId, conversationId } = body;
     const businessId = authData.userId.toString();
 
@@ -420,6 +425,18 @@ export class BotService {
     // Detect intent with function calling
     const intentResult =
       await this.conversationService.detectUserIntentWithFunctions(messages);
+
+    const { promptTokens, responseTokens, cachedTokens } = intentResult.usage;
+
+    BotService.eventEmitter.emit(Events.CHARGE_CHAT_COMPLETION, {
+      promptTokens,
+      responseTokens,
+      cachedTokens,
+      botId,
+      businessId,
+      userId: authData.userId,
+      sessionId: conversationId,
+    });
 
     // Handle function calls if present
     if (intentResult.functionCalls && intentResult.functionCalls.length > 0) {
@@ -482,6 +499,8 @@ export class BotService {
     return { data: botResponse };
   }
 
+  async liveChat(authData: AuthData, body: AskChatbotDto) {}
+
   private async intentHandler(
     intentResult: any,
     businessId: string,
@@ -494,7 +513,7 @@ export class BotService {
     if (intentResult.intent !== Intent.GENERAL_INQUIRY) {
       switch (intentResult.intent) {
         case Intent.BOOK_APPOINTMENT:
-          this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+          BotService.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
             appointmentId,
@@ -506,7 +525,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_EMAIL:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.EMAIL,
             value: intentResult.parameters?.email,
             businessId,
@@ -515,7 +534,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_NAME:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.NAME,
             value: intentResult.parameters?.name,
             businessId,
@@ -524,7 +543,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_PHONE:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.PHONE,
             value: intentResult.parameters?.phone,
             businessId,
@@ -533,7 +552,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_DATE:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE,
             value: {
               date: intentResult.parameters?.date,
@@ -545,7 +564,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_TIME:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.TIME,
             value: intentResult.parameters?.time,
             businessId,
@@ -554,7 +573,7 @@ export class BotService {
           });
           break;
         case Intent.SET_APPOINTMENT_DATE_AND_TIME:
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE_TIME,
             values: intentResult.parameters,
             businessId,
@@ -616,7 +635,7 @@ export class BotService {
 
       switch (name) {
         case "initiate_appointment_booking":
-          this.eventEmitter.emit(Events.INIT_APPOINTMENT, {
+          BotService.eventEmitter.emit(Events.INIT_APPOINTMENT, {
             businessId,
             conversationId,
             appointmentId,
@@ -627,7 +646,7 @@ export class BotService {
           break;
 
         case "collect_appointment_email":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.EMAIL,
             value: JSON.parse(args).email,
             businessId,
@@ -637,7 +656,7 @@ export class BotService {
           break;
 
         case "collect_appointment_name":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.NAME,
             value: JSON.parse(args).name,
             businessId,
@@ -647,7 +666,7 @@ export class BotService {
           break;
 
         case "collect_appointment_phone":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.PHONE,
             value: JSON.parse(args).phone,
             businessId,
@@ -657,7 +676,7 @@ export class BotService {
           break;
 
         case "set_appointment_date":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE,
             value: {
               date: JSON.parse(args).date,
@@ -670,7 +689,7 @@ export class BotService {
           break;
 
         case "set_appointment_time":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.TIME,
             value: JSON.parse(args).time,
             businessId,
@@ -680,7 +699,7 @@ export class BotService {
           break;
 
         case "set_appointment_date_and_time":
-          this.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
+          BotService.eventEmitter.emit(Events.SET_APPOINTMENT_PARAM, {
             param: AppointmentParam.DATE_TIME,
             value: JSON.parse(args),
             businessId,
@@ -767,9 +786,34 @@ export class BotService {
         BotService.logJsonError(error);
       }
 
+      const audio = new Audio(convertedPath);
+      const duration = audio.duration;
+
+      const { totalTokens: tokenCost } =
+        await this.tokenizationService.computeTranscriptionTokens({
+          transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
+        });
+      const canDebit = await this.walletService.canDeductBalance(
+        authData.userId,
+        tokenCost
+      );
+
+      if (!canDebit) {
+        return throwUnprocessableEntityError(
+          "Insufficient balance to transcribe audio"
+        );
+      }
+
       const transcription = await this.openai.audio.transcriptions.create({
         file: fs.createReadStream(convertedPath),
         model: "whisper-1",
+      });
+
+      BotService.eventEmitter.emit(Events.CHARGE_AUDIO_TRANSCRIPTION, {
+        userId: authData.userId,
+        businessId: authData.businessId,
+        botId: body.botId,
+        transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
       });
 
       return { text: transcription.text };

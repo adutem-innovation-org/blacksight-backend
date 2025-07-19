@@ -112,7 +112,10 @@ export class BotController {
   };
 
   askChatbot = async (req: GenericReq<AskChatbotDto>, res: Response) => {
-    const data = await this.botService.askChatbot(req.authData!, req.body);
+    const data = await this.botService.chatInPlayground(
+      req.authData!,
+      req.body
+    );
     return sendSuccessResponse(res, data);
   };
 
