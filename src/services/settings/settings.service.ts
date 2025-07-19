@@ -3,6 +3,7 @@ import { ISettings, Settings } from "@/models";
 import { Model } from "mongoose";
 import { config } from "@/config";
 import { CreateSettingsDto, UpdateSettingsDto } from "@/decorators";
+import { CacheService } from "@/utils";
 
 const defaultSettings = config.settings as Record<
   SettingsKeys,
@@ -14,8 +15,10 @@ export class SettingsService {
 
   private readonly settingsModel: Model<ISettings> = Settings;
 
+  private readonly cacheService: CacheService;
   constructor() {
     this.settingsModel.syncIndexes().then(console.log).catch(console.error);
+    this.cacheService = CacheService.getInstance();
   }
 
   static getInstance(): SettingsService {
