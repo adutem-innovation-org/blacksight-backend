@@ -84,5 +84,30 @@ export const config = {
     storageMarkUpPercent: Number.parseFloat(
       process.env.STORAGE_MARK_UP_PERCENT!
     ),
+    tokenConversionFactor: Number.parseFloat(
+      process.env.TOKEN_CONVERSION_FACTOR!
+    ),
+    costPerPromptToken: Number.parseFloat(process.env.COST_PER_PROMPT_TOKEN!),
+    costPerCachedPromptToken: Number.parseFloat(
+      process.env.COST_PER_CACHED_PROMPT_TOKEN!
+    ),
+    costPerCompletionToken: Number.parseFloat(
+      process.env.COST_PER_COMPLETION_TOKEN!
+    ),
+    chatCompletionMarkUpPercent: Number.parseFloat(
+      process.env.CHAT_COMPLETION_MARK_UP_PERCENT!
+    ),
+    costPerEmbeddingToken: Number.parseFloat(
+      process.env.COST_PER_EMBEDDING_TOKEN!
+    ),
+    embeddingsMarkUpPercent: Number.parseFloat(
+      process.env.EMBEDDINGS_MARK_UP_PERCENT!
+    ),
+    costPerTranscriptionMinute: Number.parseFloat(
+      process.env.COST_PER_TRANSCRIPTION_MINUTE!
+    ),
+    transcriptionMarkUpPercent: Number.parseFloat(
+      process.env.TRANSCRIPTION_MARK_UP_PERCENT!
+    ),
   },
 };
