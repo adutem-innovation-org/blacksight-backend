@@ -56,6 +56,7 @@ import EventEmitter2 from "eventemitter2";
 import { ActivityEvents } from "@/events";
 import { Logger } from "winston";
 import { logger } from "@/logging";
+import { WalletService } from "../wallet";
 
 export class AuthService {
   private static instance: AuthService;
@@ -73,6 +74,7 @@ export class AuthService {
   private readonly jwtService: JwtService;
   private readonly emailService: MailgunEmailService;
   private readonly storageService: StorageService;
+  private readonly walletService: WalletService;
 
   // Pagination
   private readonly userPagination: PaginationService<IUser>;
@@ -86,6 +88,7 @@ export class AuthService {
     this.jwtService = JwtService.getInstance();
     this.emailService = MailgunEmailService.getInstance();
     this.storageService = StorageService.getInstance();
+    this.walletService = WalletService.getInstance();
     this.userPagination = new PaginationService(this.userModel);
     this.adminPagination = new PaginationService(this.adminModel);
   }
@@ -327,6 +330,15 @@ export class AuthService {
       user.businessId = randomUUID();
     }
 
+    try {
+      if (!user.walletId) {
+        const resp = await this.walletService.getOrCreateWallet(
+          user._id.toString()
+        );
+        user.walletId = resp._id;
+      }
+    } catch (error) {}
+
     await user.save();
 
     const session = await this.setSession(user, UserTypes.USER, null);
@@ -358,6 +370,15 @@ export class AuthService {
     user.userType = UserTypes.USER;
 
     user.lastLogin = new Date();
+
+    try {
+      if (!user.walletId) {
+        const resp = await this.walletService.getOrCreateWallet(
+          user._id.toString()
+        );
+        user.walletId = resp._id;
+      }
+    } catch (error) {}
 
     await user.save();
 

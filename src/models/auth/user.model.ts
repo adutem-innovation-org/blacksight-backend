@@ -39,6 +39,7 @@ export interface IUser extends Document<Types.ObjectId> {
   hasConnectedGoogleMeet: boolean;
   hasConnectedZoomMeet: boolean;
   hasConnectedMicrosoftTeams: boolean;
+  walletId: Types.ObjectId;
   setPassword(password: string): Promise<void>;
   validatePassword(password: string): Promise<boolean>;
 }
@@ -158,6 +159,10 @@ export const UserSchema: Schema<IUser> = new Schema(
     hasConnectedMicrosoftTeams: {
       type: Boolean,
       default: false,
+    },
+    walletId: {
+      type: Schema.Types.ObjectId,
+      ref: "wallets",
     },
   },
   {
