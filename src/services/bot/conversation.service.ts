@@ -265,7 +265,16 @@ export class ConversationService {
         intentResult.functionCalls = [response.message.function_call];
       }
 
-      return intentResult;
+      return {
+        ...intentResult,
+        usage: {
+          promptTokens: openaiResponse.usage?.prompt_tokens,
+          responseTokens: openaiResponse.usage?.completion_tokens,
+          totalTokens: openaiResponse.usage?.total_tokens,
+          cachedTokens:
+            openaiResponse.usage?.prompt_tokens_details?.cached_tokens,
+        },
+      };
     } catch (error) {
       ConversationService.logger.error("Intent detection failed");
       ConversationService.logJsonError(error);
@@ -274,6 +283,12 @@ export class ConversationService {
         message: "I'm not sure I understood that. Could you please clarify?",
         parameters: null,
         functionCalls: [],
+        usage: {
+          promptTokens: 0,
+          responseTokens: 0,
+          totalTokens: 0,
+          cachedTokens: 0,
+        },
       };
     }
   }
