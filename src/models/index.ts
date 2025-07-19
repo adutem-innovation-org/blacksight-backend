@@ -12,3 +12,4 @@ export * from "./activity-logs";
 export * from "./token";
 export * from "./wallet";
 export * from "./settings";
+export * from "./transaction";

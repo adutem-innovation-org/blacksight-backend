@@ -12,3 +12,5 @@ export * from "./cron-expressions";
 export * from "./knowledge-base";
 export * from "./settings";
 export * from "./token";
+export * from "./wallet";
+export * from "./transaction";
