@@ -22,7 +22,7 @@ import {
 import { Pinecone } from "@pinecone-database/pinecone";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { KnowledgeBaseSources, UserTypes } from "@/enums";
+import { Events, KnowledgeBaseSources, UserTypes } from "@/enums";
 import { Logger } from "winston";
 import EventEmitter2 from "eventemitter2";
 
@@ -220,19 +220,38 @@ export class KnowledgeBaseService {
 
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
-    const searchResults = await pineconeIndex.query({
-      vector: queryEmbedding,
-      topK: 5, // you can increase since results are now across multiple docs
-      includeMetadata: true,
-      filter: {
-        businessId,
-        documentId: { $in: documentIds },
-      },
-    });
+    const embeddingTokens = embeddingResponse.usage.total_tokens;
 
-    return searchResults.matches
-      .map((match) => match?.metadata?.text || "")
-      .join("\n\n");
+    let readUnits = 0;
+
+    try {
+      const searchResults = await pineconeIndex.query({
+        vector: queryEmbedding,
+        topK: 5, // you can increase since results are now across multiple docs
+        includeMetadata: true,
+        filter: {
+          businessId,
+          documentId: { $in: documentIds },
+        },
+      });
+
+      readUnits = searchResults.usage?.readUnits ?? 1;
+
+      return searchResults.matches
+        .map((match) => match?.metadata?.text || "")
+        .join("\n\n");
+    } catch (error) {
+      return "";
+    } finally {
+      // Charge for knwoledge base read operation
+      KnowledgeBaseService.eventEmitter.emit(
+        Events.CHARGE_READ_KNOWLEDGE_BASE,
+        {
+          embeddingTokens,
+          readUnits,
+        }
+      );
+    }
   };
 
   async getAllKnowledgeBase(auth: AuthData) {
