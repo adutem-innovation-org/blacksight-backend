@@ -143,7 +143,9 @@ export class ConversationService {
       content: any;
     }
   ) {
-    const conversation = await this.conversationModel.findById(conversationId);
+    const conversation = await this.conversationModel.findOne({
+      conversationId,
+    });
 
     if (!conversation) return;
 
