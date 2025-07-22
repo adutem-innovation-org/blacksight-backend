@@ -212,6 +212,11 @@ export class AuthController {
     return sendSuccessResponse(res, data, StatusCodes.CREATED);
   };
 
+  skipOnboarding = async (req: Request, res: Response) => {
+    const data = await this.authService.skipOnboarding(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
   updateBusinessInfo = async (
     req: GenericReq<UpdateBusinessInfoDto>,
     res: Response

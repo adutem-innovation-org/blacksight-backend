@@ -22,6 +22,7 @@ AdminSchema.add({
 });
 
 AdminSchema.remove("businessId");
+AdminSchema.remove("skippedOnboarding");
 
 AdminSchema.clearIndexes();
 

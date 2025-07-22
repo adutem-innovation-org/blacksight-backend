@@ -228,6 +228,13 @@ authRouter.post(
   authController.onboardBusiness
 );
 
+authRouter.post(
+  "/user/skip-onboarding",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  authController.skipOnboarding
+);
+
 authRouter.patch(
   "/user/update/business/info",
   validateToken,

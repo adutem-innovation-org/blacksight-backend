@@ -447,6 +447,21 @@ export class AuthService {
     return { message: "Business info updated", business };
   }
 
+  async skipOnboarding(authData: AuthData) {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        authData.userId,
+        {
+          skippedOnboarding: true,
+        },
+        { new: true }
+      )
+      .select(GetUserAltDto);
+    if (!user || user.isSuspended)
+      return throwUnauthorizedError("Unauthorized user");
+    return { message: "Onboarding skipped", user };
+  }
+
   async updateBusinessInfo(
     authData: AuthData,
     body: UpdateBusinessInfoDto | UpdateBusinessContactInfoDto

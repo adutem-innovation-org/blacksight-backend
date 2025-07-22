@@ -31,6 +31,7 @@ export interface IUser extends Document<Types.ObjectId> {
   suspensionId?: Types.ObjectId;
   isEmailVerified: boolean;
   isOnboarded: boolean;
+  skippedOnboarding: boolean;
   google: string;
   imageUrl: string;
   isSuperAdmin: boolean;
@@ -111,6 +112,10 @@ export const UserSchema: Schema<IUser> = new Schema(
       default: false,
     },
     isOnboarded: {
+      type: Boolean,
+      default: false,
+    },
+    skippedOnboarding: {
       type: Boolean,
       default: false,
     },
