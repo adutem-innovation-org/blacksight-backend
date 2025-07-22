@@ -43,8 +43,10 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
     },
     welcomeMessage: {
       type: String,
+      // default:
+      //   "Hello there! 👋\nWelcome to our page. 🤗\nI'm a chat assistant that can provide you with more information about our business or help you book an appointment.\nWhat can I help you with today?",
       default:
-        "Hello there! 👋\nWelcome to our page. 🤗\nI'm a chat assistant that can provide you with more information about our business or help you book an appointment.\nWhat can I help you with today?",
+        "Hello there! 👋\nI'm Nova your personal assistant. How can I help you today?",
     },
     meetingProviderId: {
       type: Schema.Types.ObjectId,
