@@ -8,7 +8,8 @@ export interface IBusiness extends Document<Types.ObjectId> {
 
   name: string;
   website: string;
-  address: string;
+  // address: string;
+  businessEmail: string;
 
   industry: string;
   numberOfEmployees: CompanySize;
@@ -47,31 +48,35 @@ const BusinessSchema: Schema<IBusiness> = new Schema<IBusiness>(
     // About business
     name: {
       type: String,
-      required: [true, "Please provide your business name"],
+      // required: [true, "Please provide your business name"],
       trim: true,
     },
     website: {
       type: String,
-      required: [true, "Please provide your business website"],
+      // required: [true, "Please provide your business website"],
       match: [urlRegex, "A valid business website is required"],
     },
-    address: {
+    // address: {
+    //   type: String,
+    //   required: [true, "Please provide your business address"],
+    //   trim: true,
+    // },
+    businessEmail: {
       type: String,
-      required: [true, "Please provide your business address"],
-      trim: true,
+      matches: [emailRegex, "Please provide a valid email"],
     },
 
     // Personalization
     industry: {
       type: String,
-      required: [true, "Please specify your business's industry"],
+      // required: [true, "Please specify your business's industry"],
     },
     numberOfEmployees: {
       type: String,
-      required: [
-        true,
-        "Please specify the number of employees in your business",
-      ],
+      // required: [
+      //   true,
+      //   "Please specify the number of employees in your business",
+      // ],
       enum: {
         values: Object.values(CompanySize),
         message: "Please select a valid company size",
@@ -85,7 +90,7 @@ const BusinessSchema: Schema<IBusiness> = new Schema<IBusiness>(
     // Product feedback
     leadSource: {
       type: String,
-      required: [true, "Please tell us how you found out about us?"],
+      // required: [true, "Please tell us how you found out about us?"],
     },
     preferredFeature: {
       type: String,
@@ -98,7 +103,7 @@ const BusinessSchema: Schema<IBusiness> = new Schema<IBusiness>(
     },
     feedbackCallConsent: {
       type: String,
-      required: [true, "Please specify if you consent to feedback call"],
+      // required: [true, "Please specify if you consent to feedback call"],
     },
     preferredContactMethod: {
       type: String,
@@ -138,12 +143,12 @@ const BusinessSchema: Schema<IBusiness> = new Schema<IBusiness>(
 
     ownerId: {
       type: Schema.Types.ObjectId,
-      required: [true, "Business owner id required"],
+      // required: [true, "Business owner id required"],
       ref: "users",
     },
     businessId: {
       type: String,
-      required: [true, "Business id required"],
+      // required: [true, "Business id required"],
     },
 
     contactName: {

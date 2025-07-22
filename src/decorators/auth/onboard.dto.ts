@@ -19,11 +19,11 @@ import { CompanySize, PreferredContactMethodEnum, UserRole } from "@/enums";
 // export class OnboardBusinessDto {
 //   @IsDefined({ message: "Please provide business name" })
 //   @IsString({ message: "Business name must be string" })
-//   name!: string;
+//   name?: string;
 
 //   @IsDefined({ message: "Please provide business website" })
 //   @IsUrl({}, { message: "Business website must be a valid url" })
-//   website!: string;
+//   website?: string;
 
 //   @IsString({ message: "Please specify the type of service you offer" })
 //   industry!: string;
@@ -59,44 +59,55 @@ export class OnboardBusinessDto {
   @IsEnum(Object.values(UserRole), { message: "Please select a valid role" })
   role!: string;
 
-  @IsNotEmpty({ message: "Please provide your business name" })
+  // @IsNotEmpty({ message: "Please provide your business name" })
+  @IsOptional()
   @IsString({ message: "Business name must be string" })
-  name!: string;
+  name?: string;
 
-  @IsNotEmpty({ message: "Please provide your business website" })
+  // @IsNotEmpty({ message: "Please provide your business website" })
+  @IsOptional()
   @IsUrl({}, { message: "Your business website must have a valid url" })
   @IsString({ message: "Your business website url must be string" })
-  website!: string;
+  website?: string;
 
-  @IsNotEmpty({ message: "Please provide your business address" })
-  @IsString({ message: "Your business address must be string" })
-  address!: string;
+  // @IsNotEmpty({ message: "Please provide your business address" })
+  // @IsString({ message: "Your business address must be string" })
+  // address?: string;
 
-  @IsNotEmpty({ message: "Please specify your business's industry" })
+  @IsOptional()
+  @IsEmail({}, { message: "Your business email must be a valid email" })
+  @IsString({ message: "Your business email must be string" })
+  businessEmail?: string;
+
+  // @IsNotEmpty({ message: "Please specify your business's industry" })
+  @IsOptional()
   @IsString({ message: "Your business industry is not supported" })
-  industry!: string;
+  industry?: string;
 
-  @IsNotEmpty({
-    message: "Please specify the number of employees in your business",
-  })
+  // @IsNotEmpty({
+  //   message: "Please specify the number of employees in your business",
+  // })
+  @IsOptional()
   @IsString()
   @IsEnum(Object.values(CompanySize), {
     message: "Please select a compnay size",
   })
-  numberOfEmployees!: string;
+  numberOfEmployees?: string;
 
   @IsOptional()
   @IsString()
   primaryGoal?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: "Please tell us how you found out about us?" })
-  leadSource!: string;
+  // @IsNotEmpty({ message: "Please tell us how you found out about us?" })
+  leadSource?: string;
 
   @IsOptional()
   @IsString()
   preferredFeature?: string;
 
+  @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === true || value === "true")
   receiveUpdates = false;
@@ -106,9 +117,10 @@ export class OnboardBusinessDto {
   @IsString({ each: true })
   preferredContentType?: string[];
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: "Please specify if you consent to feedback call" })
-  feedbackCallConsent!: string;
+  // @IsNotEmpty({ message: "Please specify if you consent to feedback call" })
+  feedbackCallConsent?: string;
 
   @ValidateIf((o) => o.feedbackCallConsent === "Yes")
   @IsString()
