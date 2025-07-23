@@ -353,7 +353,7 @@ export class AppointmentService {
     let query: Record<string, any> = {};
     if (auth.userType === UserTypes.USER) {
       query.businessId = new Types.ObjectId(auth.userId);
-      query.status = { $nin: [AppointmentStatus.PENDING] };
+      // query.status = { $nin: [AppointmentStatus.PENDING] };
     }
     return await this.paginationService.paginate(
       { query, sort: { appointmentDate: -1, appointmentTime: -1 } },
