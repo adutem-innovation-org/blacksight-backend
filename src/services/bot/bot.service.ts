@@ -164,6 +164,26 @@ export class BotService {
     return { bot, message: "Bot created successfully" };
   }
 
+  async cloneBot(auth: AuthData, botId: string) {
+    const bot = await this.botModel.findOne({
+      _id: new Types.ObjectId(botId),
+      businessId: new Types.ObjectId(auth.userId),
+    });
+    if (!bot) return throwNotFoundError("Bot not found");
+
+    const clone: Omit<IBot, "_id"> & { _id?: Types.ObjectId } = bot.toObject();
+    delete clone._id;
+
+    const newBot = await this.botModel.create({
+      ...clone,
+      name: `${bot.name} (Copy)`,
+    });
+
+    await newBot.populate("knowledgeBases");
+
+    return { bot: newBot, message: "Bot cloned successfully" };
+  }
+
   /**
    * The service method is used to update a bot's configuration
    * @param auth The current authenticated user

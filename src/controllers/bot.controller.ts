@@ -66,6 +66,11 @@ export class BotController {
     return sendSuccessResponse(res, data, StatusCodes.CREATED);
   };
 
+  cloneBot = async (req: Request, res: Response) => {
+    const data = await this.botService.cloneBot(req.authData!, req.params.id);
+    return sendSuccessResponse(res, data, StatusCodes.CREATED);
+  };
+
   updateBotConfiguration = async (
     req: GenericReq<UpdateBotConfigurationDto>,
     res: Response

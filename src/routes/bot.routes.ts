@@ -51,6 +51,12 @@ botRouter.post(
   botController.configureBot
 );
 
+botRouter.post(
+  "/clone/:id",
+  permissionRequirement([UserTypes.USER]),
+  botController.cloneBot
+);
+
 botRouter
   .route("/:id")
   .get(botController.getBotById)
