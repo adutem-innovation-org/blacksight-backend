@@ -171,11 +171,16 @@ export class BotService {
     });
     if (!bot) return throwNotFoundError("Bot not found");
 
-    const clone: Omit<IBot, "_id"> & { _id?: Types.ObjectId } = bot.toObject();
-    delete clone._id;
+    const clone: Omit<IBot, "_id"> & {
+      _id?: Types.ObjectId;
+      createdAt?: string;
+      updatedAt?: string;
+    } = bot.toObject();
+
+    const { createdAt, updatedAt, _id, ...rest } = clone;
 
     const newBot = await this.botModel.create({
-      ...clone,
+      ...rest,
       name: `${bot.name} (Copy)`,
     });
 
