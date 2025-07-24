@@ -1,5 +1,6 @@
 import { CreateTemplateDto, UpdateTemplateDto } from "@/decorators";
-import { throwNotFoundError } from "@/helpers";
+import { TemplateCategory } from "@/enums";
+import { isUser, throwNotFoundError } from "@/helpers";
 import { AuthData } from "@/interfaces";
 import { EmailTemplate, IEmailTemplate } from "@/models";
 import { PaginationService } from "@/utils";
@@ -25,6 +26,38 @@ export class TemplatesService {
       TemplatesService.instance = new TemplatesService();
     }
     return TemplatesService.instance;
+  }
+
+  async analytics(auth: AuthData) {
+    const queryObj: Record<string, any> = {};
+
+    if (isUser(auth)) queryObj["createdBy"] = new Types.ObjectId(auth.userId);
+
+    const result = await Promise.allSettled([
+      this.emailTemplateModel.countDocuments(queryObj).exec(),
+      this.emailTemplateModel
+        .countDocuments({
+          category: TemplateCategory.PAYMENT,
+          ...queryObj,
+        })
+        .exec(),
+      this.emailTemplateModel
+        .countDocuments({
+          category: TemplateCategory.APPOINTMENT,
+          ...queryObj,
+        })
+        .exec(),
+    ]);
+
+    return {
+      data: {
+        totalTemplates: result[0].status === "fulfilled" ? result[0].value : 0,
+        paymentTemplates:
+          result[1].status === "fulfilled" ? result[1].value : 0,
+        appointmentTemplates:
+          result[2].status === "fulfilled" ? result[2].value : 0,
+      },
+    };
   }
 
   /**
