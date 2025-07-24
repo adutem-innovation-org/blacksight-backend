@@ -40,8 +40,14 @@ export class CalendarService {
   async getCalendarProviders(auth: AuthData) {
     const providers = await this.calendarProviderModel.find({
       userId: new Types.ObjectId(auth.userId),
-      accessToken: { $exists: true },
-      refreshToken: { $exists: true },
+      $or: [
+        {
+          $and: [
+            { accessToken: { $exists: true }, refreshToken: { $exists: true } },
+          ],
+        },
+        { apiKey: { $exists: true }, eventTypeId: { $exists: true } },
+      ],
     });
     return { providers };
   }
