@@ -1,8 +1,8 @@
-import { MeetingProvidersEnum } from "@/enums";
+import { CalendarProvidersEnum } from "@/enums";
 import { AuthData } from "@/interfaces";
 import {
-  MeetingProvider,
-  IMeetingProvider,
+  CalendarProvider,
+  ICalendarProvider,
   IUser,
   User,
   IAppointment,
@@ -14,13 +14,14 @@ import { google } from "googleapis";
 import { Logger } from "winston";
 import { logger } from "@/logging";
 import { v4 as uuidv4 } from "uuid";
+import { ConnectCalcomDto } from "@/decorators";
 
-export class MeetingProviderService {
-  private static instance: MeetingProviderService;
+export class CalendarService {
+  private static instance: CalendarService;
   private static logger: Logger = logger;
 
-  private readonly meetingProviderModel: Model<IMeetingProvider> =
-    MeetingProvider;
+  private readonly calendarProviderModel: Model<ICalendarProvider> =
+    CalendarProvider;
   private readonly userModel: Model<IUser> = User;
 
   private readonly googleCalenderService: GoogleCalenderService;
@@ -31,13 +32,13 @@ export class MeetingProviderService {
 
   static getInstance() {
     if (!this.instance) {
-      this.instance = new MeetingProviderService();
+      this.instance = new CalendarService();
     }
     return this.instance;
   }
 
-  async getMeetingProviders(auth: AuthData) {
-    const providers = await this.meetingProviderModel.find({
+  async getCalendarProviders(auth: AuthData) {
+    const providers = await this.calendarProviderModel.find({
       userId: new Types.ObjectId(auth.userId),
       accessToken: { $exists: true },
       refreshToken: { $exists: true },
@@ -55,7 +56,7 @@ export class MeetingProviderService {
     if (!tokens) {
       return `
         <script>
-            window.opener.postMessage({provider: 'google-meet', success: false}, '*');
+            window.opener.postMessage({provider: 'google-calendar', success: false}, '*');
             window.close()
         </script>
         `;
@@ -64,7 +65,7 @@ export class MeetingProviderService {
     const user = await this.userModel.findById(userId);
     if (!user)
       return `<script>
-            window.opener.postMessage({provider: 'google-meet', success: false}, '*');
+            window.opener.postMessage({provider: 'google-calendar', success: false}, '*');
             window.close()
         </script>`;
 
@@ -74,10 +75,10 @@ export class MeetingProviderService {
         tokens.id_token
       );
 
-    await this.meetingProviderModel.findOneAndUpdate(
+    await this.calendarProviderModel.findOneAndUpdate(
       {
         userId: new Types.ObjectId(userId),
-        provider: MeetingProvidersEnum.GOOGLE,
+        provider: CalendarProvidersEnum.GOOGLE,
       },
       {
         accessToken: tokens.access_token,
@@ -87,7 +88,7 @@ export class MeetingProviderService {
         expiryDate: new Date(
           tokens.expiry_date ?? this.getSevenDaysFromNow()
         ).getTime(),
-        provider: MeetingProvidersEnum.GOOGLE,
+        provider: CalendarProvidersEnum.GOOGLE,
       },
       { upsert: true }
     );
@@ -98,7 +99,7 @@ export class MeetingProviderService {
 
     return `
         <script>
-            window.opener.postMessage({provider: 'google-meet', success: true}, '*');
+            window.opener.postMessage({provider: 'google-calendar', success: true}, '*');
             window.close()
         </script>
         `;
@@ -112,7 +113,7 @@ export class MeetingProviderService {
     summary,
     timeZone = "America/Los_Angeles",
   }: {
-    provider: IMeetingProvider;
+    provider: ICalendarProvider;
     customerEmail: string;
     startTime: string;
     endTime: string;
@@ -161,13 +162,13 @@ export class MeetingProviderService {
       metadata: result.data as any,
     };
 
-    MeetingProviderService.logger.info("Google meet event scheduled.");
+    CalendarService.logger.info("Google meet event scheduled.");
   }
 
   async disconnectGoogle(auth: AuthData) {
-    await this.meetingProviderModel.findOneAndUpdate(
+    await this.calendarProviderModel.findOneAndUpdate(
       {
-        provider: MeetingProvidersEnum.GOOGLE,
+        provider: CalendarProvidersEnum.GOOGLE,
         userId: new Types.ObjectId(auth.userId),
       },
       { $unset: { accessToken: 1, refreshToken: 1, expiryDate: 1 } }
@@ -184,9 +185,46 @@ export class MeetingProviderService {
     return { message: "Google calender has been disconnect successfully." };
   }
 
-  async connectZoom(auth: AuthData) {}
+  async connectCalcom(auth: AuthData, body: ConnectCalcomDto) {
+    await this.calendarProviderModel.findOneAndUpdate(
+      {
+        provider: CalendarProvidersEnum.CALCOM,
+        userId: new Types.ObjectId(auth.userId),
+      },
+      { ...body, provider: CalendarProvidersEnum.CALCOM },
+      { upsert: true }
+    );
 
-  async connectZoomCallback(auth: AuthData) {}
+    await this.userModel.findByIdAndUpdate(auth.userId, {
+      hasConnectedCalcom: true,
+    });
+
+    return { message: "Calcom has been connected successfully." };
+  }
+
+  async disconnectCalcom(auth: AuthData) {
+    await this.calendarProviderModel.findOneAndUpdate(
+      {
+        provider: CalendarProvidersEnum.CALCOM,
+        userId: new Types.ObjectId(auth.userId),
+      },
+      {
+        $unset: {
+          accessToken: 1,
+          refreshToken: 1,
+          expiryDate: 1,
+          sub: 1,
+          apiKey: 1,
+          eventTypeId: 1,
+        },
+      }
+    );
+    await this.userModel.findByIdAndUpdate(auth.userId, {
+      hasConnectedCalcom: false,
+    });
+
+    return { message: "Calcom has been disconnected successfully." };
+  }
 
   getSevenDaysFromNow() {
     return Date.now() + 1000 * 60 * 60 * 24 * 7;

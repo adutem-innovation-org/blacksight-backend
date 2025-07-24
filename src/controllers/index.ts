@@ -3,7 +3,7 @@ export * from "./analytics.controller";
 export * from "./reminder.controller";
 export * from "./knowledge-base.controller";
 export * from "./bot.controller";
-export * from "./meeting-provider.controller";
+export * from "./calendar.controller";
 export * from "./appointment.controller";
 export * from "./notification.controller";
 export * from "./api-key.controller";

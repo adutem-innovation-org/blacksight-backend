@@ -31,9 +31,9 @@ import {
   IBot,
   IConversation,
   IKnowledgeBase,
-  IMeetingProvider,
+  ICalendarProvider,
   KnowledgeBase,
-  MeetingProvider,
+  CalendarProvider,
 } from "@/models";
 import {
   AudioConverter,
@@ -71,8 +71,8 @@ export class BotService {
   // Models
   private readonly botModel: Model<IBot> = Bot;
   private readonly knowledgeBaseModel: Model<IKnowledgeBase> = KnowledgeBase;
-  private readonly meetingProviderModel: Model<IMeetingProvider> =
-    MeetingProvider;
+  private readonly meetingProviderModel: Model<ICalendarProvider> =
+    CalendarProvider;
   private readonly conversationModel: Model<IConversation> = Conversation;
 
   // Services

@@ -1,6 +1,6 @@
 import { config } from "@/config";
-import { MeetingProvidersEnum } from "@/enums";
-import { IMeetingProvider, MeetingProvider } from "@/models";
+import { CalendarProvidersEnum } from "@/enums";
+import { ICalendarProvider, CalendarProvider } from "@/models";
 import { addSeconds } from "date-fns";
 import { Credentials, OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
@@ -10,8 +10,8 @@ export class GoogleCalenderService {
   private readonly oauth2Client: OAuth2Client;
   private static instance: GoogleCalenderService;
 
-  private readonly meetingProviderModel: Model<IMeetingProvider> =
-    MeetingProvider;
+  private readonly meetingProviderModel: Model<ICalendarProvider> =
+    CalendarProvider;
 
   constructor() {
     this.oauth2Client = new google.auth.OAuth2({
@@ -38,7 +38,7 @@ export class GoogleCalenderService {
           if (tokenPayload) {
             const expiration_time = addSeconds(new Date(), 60 * 60);
             await this.meetingProviderModel.findOneAndUpdate(
-              { sub: tokenPayload.sub, provider: MeetingProvidersEnum.GOOGLE },
+              { sub: tokenPayload.sub, provider: CalendarProvidersEnum.GOOGLE },
               {
                 accessToken: tokens.access_token,
                 refreshToken: tokens.refresh_token,
@@ -47,7 +47,7 @@ export class GoogleCalenderService {
                 expiryDate: new Date(
                   tokens.expiry_date ?? expiration_time
                 ).getTime(),
-                provider: MeetingProvidersEnum.GOOGLE,
+                provider: CalendarProvidersEnum.GOOGLE,
               }
             );
           }

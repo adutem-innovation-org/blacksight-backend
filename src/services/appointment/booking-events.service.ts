@@ -2,15 +2,15 @@ import { logJsonError, throwUnprocessableEntityError } from "@/helpers";
 import {
   Appointment,
   IAppointment,
-  IMeetingProvider,
-  MeetingProvider,
+  ICalendarProvider,
+  CalendarProvider,
 } from "@/models";
 import { Model } from "mongoose";
-import { MeetingProviderService } from "../meeting-provider";
+import { CalendarService } from "../calendar";
 import { Logger } from "winston";
 import { logger } from "@/logging";
 import cron from "node-cron";
-import { CronExpression, MeetingProvidersEnum } from "@/enums";
+import { CronExpression, CalendarProvidersEnum } from "@/enums";
 import { PaginationService } from "@/utils";
 import { addMinutes } from "date-fns";
 
@@ -20,16 +20,16 @@ export class BookingEventService {
   private static logger: Logger = logger;
 
   // Models
-  private readonly meetingProviderModel: Model<IMeetingProvider> =
-    MeetingProvider;
+  private readonly meetingProviderModel: Model<ICalendarProvider> =
+    CalendarProvider;
   private readonly appointmentModel: Model<IAppointment> = Appointment;
 
   // Services
-  private readonly meetingProviderService: MeetingProviderService;
+  private readonly meetingProviderService: CalendarService;
   private readonly appointmentPagination: PaginationService<IAppointment>;
 
   constructor() {
-    this.meetingProviderService = MeetingProviderService.getInstance();
+    this.meetingProviderService = CalendarService.getInstance();
     this.appointmentPagination = new PaginationService(this.appointmentModel);
     this._setupCronJobs();
   }
@@ -75,7 +75,7 @@ export class BookingEventService {
             "Schedule meeting failed >> Provider already disconnected"
           );
         switch (provider.provider) {
-          case MeetingProvidersEnum.GOOGLE:
+          case CalendarProvidersEnum.GOOGLE:
             await this.bookGoogleMeet(appointment);
             break;
           default:

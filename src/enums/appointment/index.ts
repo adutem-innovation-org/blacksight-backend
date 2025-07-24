@@ -6,10 +6,9 @@ export enum AppointmentStatus {
   COMPLETED = "completed",
 }
 
-export enum MeetingProvidersEnum {
-  ZOOM = "zoom-meet",
-  GOOGLE = "google-meet",
-  MICROSOFT = "microsoft-teams",
+export enum CalendarProvidersEnum {
+  GOOGLE = "google-calendar",
+  CALCOM = "cal-com",
 }
 
 export enum AppointmentParam {

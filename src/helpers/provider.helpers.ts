@@ -1,11 +1,11 @@
 import { config } from "@/config";
-import { MeetingProvidersEnum } from "@/enums";
-import { IMeetingProvider } from "@/models";
+import { CalendarProvidersEnum } from "@/enums";
+import { ICalendarProvider } from "@/models";
 import axios from "axios";
 import { throwServerError } from "./throw-request-error";
 import qs from "qs";
 
-export async function refreshTokenIfNeeded(provider: IMeetingProvider) {
+export async function refreshTokenIfNeeded(provider: ICalendarProvider) {
   const now = Date.now();
 
   if (new Date(provider.expiryDate).getTime() - now > 60000) {
@@ -14,14 +14,10 @@ export async function refreshTokenIfNeeded(provider: IMeetingProvider) {
 
   let newTokens;
   switch (provider.provider) {
-    case MeetingProvidersEnum.GOOGLE:
+    case CalendarProvidersEnum.GOOGLE:
       newTokens = await refreshGoogleToken(provider.refreshToken);
       break;
-    case MeetingProvidersEnum.ZOOM:
-      newTokens = await refreshZoomToken(provider.refreshToken);
-      break;
-    case MeetingProvidersEnum.MICROSOFT:
-      newTokens = await refreshTeamsToken(provider.refreshToken);
+    case CalendarProvidersEnum.CALCOM:
       break;
     default:
       throwServerError("Unsupported Provider");

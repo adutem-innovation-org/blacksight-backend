@@ -4,7 +4,7 @@ export * from "./reminder";
 export * from "./knowledge-base";
 export * from "./bot";
 export * from "./activity";
-export * from "./meeting-provider";
+export * from "./calendar";
 export * from "./appointment";
 export * from "./notification";
 export * from "./api-key";
