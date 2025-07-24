@@ -13,3 +13,4 @@ export * from "./token";
 export * from "./wallet";
 export * from "./settings";
 export * from "./transaction";
+export * from "./templates";

@@ -9,6 +9,7 @@ import { appointmentRouter } from "./appointment.routes";
 import { notificationRouter } from "./notification.routes";
 import { apiKeyRouter } from "./api-key.routes";
 import { settingsRouter } from "./settings.routes";
+import { templatesRouter } from "./templates.routes";
 
 export const appRouter = createRouter();
 
@@ -22,3 +23,4 @@ appRouter.use("/reminder", reminderRouter);
 appRouter.use("/notification", notificationRouter);
 appRouter.use("/api-key", apiKeyRouter);
 appRouter.use("/settings", settingsRouter);
+appRouter.use("/templates", templatesRouter);
