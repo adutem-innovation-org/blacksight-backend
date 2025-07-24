@@ -195,9 +195,13 @@ export class CalendarService {
       { upsert: true }
     );
 
-    await this.userModel.findByIdAndUpdate(auth.userId, {
-      hasConnectedCalcom: true,
-    });
+    await this.userModel.findByIdAndUpdate(
+      auth.userId,
+      {
+        hasConnectedCalCom: true,
+      },
+      { new: true }
+    );
 
     return { message: "Calcom has been connected successfully." };
   }
@@ -220,7 +224,7 @@ export class CalendarService {
       }
     );
     await this.userModel.findByIdAndUpdate(auth.userId, {
-      hasConnectedCalcom: false,
+      hasConnectedCalCom: false,
     });
 
     return { message: "Calcom has been disconnected successfully." };
