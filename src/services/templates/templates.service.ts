@@ -28,6 +28,11 @@ export class TemplatesService {
     return TemplatesService.instance;
   }
 
+  /**
+   * Gets analytics data for templates
+   * @param auth The authentication data from the authenticated user
+   * @returns The analytics data
+   */
   async analytics(auth: AuthData) {
     const queryObj: Record<string, any> = {};
 

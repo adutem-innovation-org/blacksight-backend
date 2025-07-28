@@ -23,4 +23,4 @@ appRouter.use("/reminder", reminderRouter);
 appRouter.use("/notification", notificationRouter);
 appRouter.use("/api-key", apiKeyRouter);
 appRouter.use("/settings", settingsRouter);
-appRouter.use("/templates", templatesRouter);
+appRouter.use("/template", templatesRouter);

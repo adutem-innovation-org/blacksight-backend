@@ -22,6 +22,11 @@ export class TemplatesController {
     return TemplatesController.instance;
   }
 
+  anayltics = async (req: Request, res: Response) => {
+    const data = await this.templatesService.analytics(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
   createTemplate = async (
     req: GenericReq<CreateTemplateDto>,
     res: Response
