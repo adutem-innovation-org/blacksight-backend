@@ -10,7 +10,7 @@ export interface IEmailTemplate extends Document<Types.ObjectId> {
   content: string;
   preview?: string;
   dynamicFields: string[];
-  niches: string[];
+  keywords: string[];
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -50,9 +50,9 @@ const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
       type: [String],
       required: [true, "Please provide template dynamic fields"],
     },
-    niches: {
+    keywords: {
       type: [String],
-      required: [true, "Please provide template niches"],
+      required: [true, "Please provide template keywords"],
     },
     createdBy: {
       type: Schema.Types.ObjectId,
