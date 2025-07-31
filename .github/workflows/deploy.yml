@@ -50,5 +50,5 @@ jobs:
       - name: Install dependencies and restart PM2 on EC2
         run: |
           ssh ec2-user@${{ secrets.EC2_HOST }} "cd /home/ec2-user/blacksight-backend && \
-            yarn install --frozen-lockfile && \
+            PUPPETEER_SKIP_DOWNLOAD=true yarn install --frozen-lockfile && \
             pm2 reload ecosystem.config.js --env production"
