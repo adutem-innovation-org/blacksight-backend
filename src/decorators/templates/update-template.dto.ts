@@ -6,35 +6,41 @@ import {
   IsNotEmpty,
   IsString,
   IsOptional,
+  IsObject,
 } from "class-validator";
 
 export class UpdateTemplateDto {
   @IsOptional()
   @IsNotEmpty({ message: "Template name must not be empty" })
   @IsString({ message: "Template name must be a string" })
-  name!: string;
+  name?: string;
 
   @IsOptional()
   @IsNotEmpty({ message: "Template description must not be empty" })
   @IsString({ message: "Template description must be a string" })
-  description!: string;
+  description?: string;
 
   @IsOptional()
   @IsNotEmpty({ message: "Template type must not be empty" })
   @IsString({ message: "Template type must be a string" })
   @IsEnum(TemplateType, { message: "Invalid template type" })
-  type!: TemplateType;
+  type?: TemplateType;
 
   @IsOptional()
   @IsNotEmpty({ message: "Template category must not be empty" })
   @IsString({ message: "Template category must be a string" })
   @IsEnum(TemplateCategory, { message: "Invalid template category" })
-  category!: TemplateCategory;
+  category?: TemplateCategory;
 
   @IsOptional()
-  @IsNotEmpty({ message: "Template content must not be empty" })
-  @IsString({ message: "Template content must be a string" })
-  content!: string;
+  @IsNotEmpty({ message: "Template html must not be empty" })
+  @IsString({ message: "Template html must be a string" })
+  html?: string;
+
+  @IsOptional()
+  @IsNotEmpty({ message: "Template design must not be empty" })
+  @IsObject({ message: "Tmeplate design must be an object" })
+  design?: any;
 
   @IsOptional()
   @IsNotEmpty({ message: "Template dynamic fields must not be empty" })
@@ -46,11 +52,11 @@ export class UpdateTemplateDto {
   dynamicFields!: string[];
 
   @IsOptional()
-  @IsNotEmpty({ message: "Template niches must not be empty" })
-  @IsArray({ message: "Niches should be an array" })
+  @IsNotEmpty({ message: "Template keywords must not be empty" })
+  @IsArray({ message: "Keywords should be an array" })
   @ArrayNotEmpty({
-    message: "Niches are required for the template",
+    message: "Keywords are required for the template",
   })
-  @IsString({ each: true, message: "Each niche must be a string" })
-  niches!: string[];
+  @IsString({ each: true, message: "Each keyword must be a string" })
+  keywords!: string[];
 }

@@ -3,7 +3,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsEnum,
-  IsNotEmpty,
+  IsNotEmpty, IsObject,
   IsString,
 } from "class-validator";
 
@@ -26,9 +26,13 @@ export class CreateTemplateDto {
   @IsEnum(TemplateCategory, { message: "Invalid template category" })
   category!: TemplateCategory;
 
-  @IsNotEmpty({ message: "Template content must not be empty" })
-  @IsString({ message: "Template content must be a string" })
-  content!: string;
+  @IsNotEmpty({ message: "Template html must not be empty" })
+  @IsString({ message: "Template html must be a string" })
+  html!: string;
+
+  @IsNotEmpty({message: "Template design must not be empty" })
+  @IsObject({message: "Tmeplate design must be an object"})
+  design!: any;
 
   @IsNotEmpty({ message: "Template dynamic fields must not be empty" })
   @IsArray({ message: "Dynamic fields should be an array" })
@@ -38,11 +42,11 @@ export class CreateTemplateDto {
   @IsString({ each: true, message: "Each dynamic field must be a string" })
   dynamicFields!: string[];
 
-  @IsNotEmpty({ message: "Template niches must not be empty" })
-  @IsArray({ message: "Niches should be an array" })
+  @IsNotEmpty({ message: "Template keywords must not be empty" })
+  @IsArray({ message: "Keywords should be an array" })
   @ArrayNotEmpty({
-    message: "Niches are required for the template",
+    message: "Keywords are required for the template",
   })
-  @IsString({ each: true, message: "Each niche must be a string" })
-  niches!: string[];
+  @IsString({ each: true, message: "Each keyword must be a string" })
+  keywords!: string[];
 }
