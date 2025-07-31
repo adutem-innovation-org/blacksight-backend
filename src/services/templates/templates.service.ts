@@ -103,6 +103,7 @@ export class TemplatesService {
           "type",
           "category",
           "html",
+          "design",
           "preview",
           "dynamicFields",
           "keywords",
