@@ -5,6 +5,7 @@ import { AuthData } from "@/interfaces";
 import { EmailTemplate, IEmailTemplate } from "@/models";
 import { PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
+import puppeteer from "puppeteer";
 
 export class TemplatesService {
   private static instance: TemplatesService;
@@ -89,8 +90,8 @@ export class TemplatesService {
       queryObj["category"] = query.category;
     }
 
-    if (query.niches) {
-      queryObj["niches"] = { $in: query.niches };
+    if (query.keywords) {
+      queryObj["keywords"] = { $in: query.keywords };
     }
 
     const templates = await this.templatesPagination.paginate(
@@ -101,9 +102,10 @@ export class TemplatesService {
           "description",
           "type",
           "category",
+          "html",
           "preview",
           "dynamicFields",
-          "niches",
+          "keywords",
           "createdAt",
           "updatedAt",
         ],
@@ -144,5 +146,28 @@ export class TemplatesService {
     });
     if (!template) return throwNotFoundError("Template not found");
     return { template, message: "Template deleted successfully" };
+  }
+
+  async _generatePreview(html: string) {
+    // Launch puppeteer
+    const browser = await puppeteer.launch();
+    try {
+      // Open a new page
+      const page = await browser.newPage();
+
+      // Set the HTML content
+      await page.setContent(html, { waitUntil: "networkidle0" });
+
+      // Generate image
+      const imageBuffer = await page.screenshot({
+        fullPage: true,
+      });
+
+      await browser.close();
+    } catch (e) {
+      console.log("Error generating preview", e);
+    } finally {
+      await browser.close();
+    }
   }
 }
