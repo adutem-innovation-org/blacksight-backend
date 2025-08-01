@@ -91,9 +91,10 @@ export class ConversationService {
     if (auth.userType === UserTypes.USER) {
       query.businessId = new Types.ObjectId(auth.userId);
     }
-    return await this.paginationService.paginate({ query, populate: ["bot"] }, [
-      "-createdAt",
-    ]);
+    return await this.paginationService.paginate(
+      { query, populate: ["bot"], sort: { createdAt: -1 } },
+      []
+    );
   }
 
   async getOrCreateConversation(

@@ -61,8 +61,9 @@ export class BookingEventService {
           scheduledByProvider: false,
           meetingLink: { $exists: false },
         },
+        sort: { createdAt: -1 },
       },
-      ["-createdAt"]
+      []
     );
 
     for (const appointment of resp.data) {
