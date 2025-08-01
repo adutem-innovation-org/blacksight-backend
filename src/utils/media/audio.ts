@@ -24,4 +24,19 @@ export class AudioConverter {
         .save(outputPath);
     });
   }
+
+  static getAudioDuration(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(filePath, (err, metadata) => {
+        if (err) {
+          return reject(err);
+        }
+        if (metadata && metadata.format && metadata.format.duration) {
+          resolve(metadata.format.duration);
+        } else {
+          reject(new Error("Could not retrieve audio duration."));
+        }
+      });
+    });
+  }
 }
