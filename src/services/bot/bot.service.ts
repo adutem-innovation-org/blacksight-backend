@@ -424,6 +424,22 @@ export class BotService {
     const { userQuery, botId, conversationId } = body;
     const businessId = authData.userId.toString();
 
+    return await this.chat(
+      botId,
+      conversationId,
+      businessId,
+      userQuery,
+      authData
+    );
+  }
+
+  async chat(
+    botId: string,
+    conversationId: string,
+    businessId: string,
+    userQuery: string,
+    authData: AuthData
+  ) {
     const bot = await this.getBotConfig(botId);
 
     // Get current appointment context
@@ -811,38 +827,44 @@ export class BotService {
         BotService.logJsonError(error);
       }
 
-      const audio = new Audio(convertedPath);
-      const duration = audio.duration;
-
-      const { totalTokens: tokenCost } =
-        await this.tokenizationService.computeTranscriptionTokens({
-          transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
-        });
-      const canDebit = await this.walletService.canDeductBalance(
-        authData.userId,
-        tokenCost
-      );
-
-      if (!canDebit) {
-        return throwUnprocessableEntityError(
-          "Insufficient balance to transcribe audio"
-        );
+      let duration = 0;
+      try {
+        duration = await AudioConverter.getAudioDuration(convertedPath);
+      } catch (error) {
+        BotService.logger.error("Unable to get audio duration");
+        BotService.logJsonError(error);
       }
+
+      // const { totalTokens: tokenCost } =
+      //   await this.tokenizationService.computeTranscriptionTokens({
+      //     transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
+      //   });
+      // const canDebit = await this.walletService.canDeductBalance(
+      //   authData.userId,
+      //   tokenCost
+      // );
+
+      // if (!canDebit) {
+      //   return throwUnprocessableEntityError(
+      //     "Insufficient balance to transcribe audio"
+      //   );
+      // }
 
       const transcription = await this.openai.audio.transcriptions.create({
         file: fs.createReadStream(convertedPath),
         model: "whisper-1",
       });
 
-      BotService.eventEmitter.emit(Events.CHARGE_AUDIO_TRANSCRIPTION, {
-        userId: authData.userId,
-        businessId: authData.businessId,
-        botId: body.botId,
-        transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
-      });
+      // BotService.eventEmitter.emit(Events.CHARGE_AUDIO_TRANSCRIPTION, {
+      //   userId: authData.userId,
+      //   businessId: authData.businessId,
+      //   botId: body.botId,
+      //   transcriptionMinutes: parseFloat((duration / 60).toFixed(2)),
+      // });
 
       return { text: transcription.text };
     } catch (error) {
+      console.log("error", error);
       BotService.logJsonError(error);
       return throwUnprocessableEntityError("Unable to transcribe audio");
     } finally {
