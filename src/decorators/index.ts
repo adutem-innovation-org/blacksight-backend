@@ -6,3 +6,4 @@ export * from "./bot";
 export * from "./appointment";
 export * from "./settings";
 export * from "./templates";
+export * from "./agent";
