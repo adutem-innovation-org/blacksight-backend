@@ -1,0 +1,35 @@
+import { throwNotFoundError } from "@/helpers";
+import { AuthData } from "@/interfaces";
+import { Bot, IBot } from "@/models";
+import { Model } from "mongoose";
+
+export class AgentService {
+  private static instance: AgentService;
+
+  private readonly agentModel: Model<IBot> = Bot;
+
+  constructor() {}
+
+  static getInstance(): AgentService {
+    if (!this.instance) {
+      this.instance = new AgentService();
+    }
+    return this.instance;
+  }
+
+  async connect(authData: AuthData, agentId: string) {
+    const agent = await this.agentModel.findOne({
+      _id: agentId,
+      businessId: authData.userId,
+    });
+    if (!agent)
+      return throwNotFoundError(
+        "Error occured while connecting to because this agent is unknown. Ensure you provided a valid agent identifier."
+      );
+
+    for (let i = 0; i < 50_000; i++) {
+      console.log(i);
+    }
+    return { agent };
+  }
+}

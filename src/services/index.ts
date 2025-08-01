@@ -11,3 +11,4 @@ export * from "./api-key";
 export * from "./settings";
 export * from "./wallet";
 export * from "./templates";
+export * from "./agent";

@@ -10,6 +10,7 @@ import { notificationRouter } from "./notification.routes";
 import { apiKeyRouter } from "./api-key.routes";
 import { settingsRouter } from "./settings.routes";
 import { templatesRouter } from "./templates.routes";
+import { agentRouter } from "./agent.routes";
 
 export const appRouter = createRouter();
 
@@ -24,3 +25,4 @@ appRouter.use("/notification", notificationRouter);
 appRouter.use("/api-key", apiKeyRouter);
 appRouter.use("/settings", settingsRouter);
 appRouter.use("/template", templatesRouter);
+appRouter.use("/agent", agentRouter);
