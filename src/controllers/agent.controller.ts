@@ -20,6 +20,8 @@ export class AgentController {
 
   connect = async (req: Request, res: Response) => {
     const agentId = req.headers["x-agent-id"] as string;
+    const sessionId = req.sessionId;
+
     if (!agentId)
       return throwUnprocessableEntityError(
         "Unable to connect. Missing agent ID."
@@ -30,7 +32,16 @@ export class AgentController {
         "Unable to connect. Invalid agent ID."
       );
 
-    const data = await this.agentService.connect(req.authData!, agentId);
+    if (!sessionId)
+      return throwUnprocessableEntityError(
+        "Unable to connect. Missing session ID."
+      );
+
+    const data = await this.agentService.connect(
+      req.authData!,
+      agentId,
+      sessionId
+    );
     return sendSuccessResponse(res, data);
   };
 }
