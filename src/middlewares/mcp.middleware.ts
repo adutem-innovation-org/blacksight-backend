@@ -1,3 +1,4 @@
+import { throwUnprocessableEntityError } from "@/helpers";
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
@@ -8,11 +9,9 @@ export const extractSessionId = (
 ) => {
   req.sessionId = req.body.sessionId || req.headers["x-session-id"];
   if (!req.sessionId) {
-    return res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
-      success: false,
-      message: "Unknown session, please provide session id",
-      status: StatusCodes.UNPROCESSABLE_ENTITY,
-    });
+    return throwUnprocessableEntityError(
+      "Unknown session, please provide session id"
+    );
   }
-  next();
+  return next();
 };
