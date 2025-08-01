@@ -114,9 +114,13 @@ export class ConversationService {
     return conversation;
   }
 
-  async startNewConversation(botId: string, businessId: string) {
+  async startNewConversation(
+    botId: string,
+    businessId: string,
+    conversationId?: string
+  ) {
     const conversation = await this.conversationModel.create({
-      conversationId: uuid_v4(),
+      conversationId: conversationId ?? uuid_v4(),
       botId,
       businessId,
     });
