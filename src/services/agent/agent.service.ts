@@ -27,7 +27,7 @@ export class AgentService {
         "Error occured while connecting to because this agent is unknown. Ensure you provided a valid agent identifier."
       );
 
-    for (let i = 0; i < 50_000; i++) {
+    for (let i = 0; i < 30_000; i++) {
       console.log(i);
     }
     return { agent };
