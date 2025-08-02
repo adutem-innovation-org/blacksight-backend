@@ -33,7 +33,7 @@ export const errorHandler = (
   }
   if (err && err.name === "ValidationError") {
     errorObject.status = StatusCodes.BAD_REQUEST;
-    errorObject.message = err.message;
+    errorObject.message = err.message.split(": ").pop();
   }
   if (err && err.code === 11000) {
     let message = Object.keys(err.keyValue).join(", ");
