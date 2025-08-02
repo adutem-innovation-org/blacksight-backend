@@ -1,4 +1,4 @@
-import { Intent } from "@/enums";
+import { Intent, LiveAgentIntent } from "@/enums";
 
 export * from "./instructions";
 
@@ -33,4 +33,32 @@ export const intentActionsMapper: Record<Intent, string> = {
     "The user indicates the conversation is complete. Respond with a courteous closing like: 'Great! If you have any more questions later, feel free to reach out. Have a great day!'",
   GENERAL_INQUIRY:
     "You provided general information or answered a question without any appointment-related action",
+};
+
+export const liveAgentIntentActionsMapper: Record<LiveAgentIntent, string> = {
+  BOOK_APPOINTMENT:
+    "You detected the user wants to book an appointment. Direct them to fill out the appointment form that will appear. Wait for form completion or cancellation actions from the frontend.",
+
+  ESCALATE_CHAT:
+    "The user confirmed they want to create a support ticket after you couldn't help with their inquiry. Direct them to fill out the escalation ticket form that will appear. Wait for form completion or cancellation actions from the frontend.",
+
+  GENERAL_INQUIRY:
+    "You provided general information or answered a question. If you cannot answer their question with your current knowledge base, offer to create a support ticket with the support team.",
+
+  END_CONVERSATION:
+    "The user indicates the conversation is complete. Respond with a courteous closing like: 'Great! If you have any more questions later, feel free to reach out. Have a great day!'",
+};
+
+export const functionToIntentMapper: Record<
+  string,
+  { intent: LiveAgentIntent; message: string }
+> = {
+  initiate_appointment_booking: {
+    intent: LiveAgentIntent.BOOK_APPOINTMENT,
+    message: "Please fill out the booking form below",
+  },
+  initiate_escalation_ticket: {
+    intent: LiveAgentIntent.ESCALATE_CHAT,
+    message: "Please fill out the support ticket form below",
+  },
 };

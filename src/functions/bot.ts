@@ -108,3 +108,46 @@ export const appointmentFunctions = [
     },
   },
 ];
+
+export const liveAgentFunctions = [
+  {
+    name: "initiate_appointment_booking",
+    description:
+      "Start the appointment booking process when user is ready to book",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "provide_booking_information",
+    description:
+      "Provide information about booking process and seek confirmation",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "initiate_escalation_ticket",
+    description:
+      "Start the support ticket escalation process when user confirms",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "provide_escalation_information",
+    description:
+      "Provide information about escalation process and seek confirmation",
+    parameters: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+];

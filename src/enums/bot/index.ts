@@ -16,8 +16,22 @@ export enum Intent {
   END_CONVERSATION = "END_CONVERSATION",
 }
 
+export enum LiveAgentIntent {
+  BOOK_APPOINTMENT = "BOOK_APPOINTMENT",
+  ESCALATE_CHAT = "ESCALATE_CHAT",
+  GENERAL_INQUIRY = "GENERAL_INQUIRY",
+  END_CONVERSATION = "END_CONVERSATION",
+}
+
 export interface IntentResult {
   intent: Intent;
   parameters?: Record<string, string>;
   message: string;
+}
+
+export enum UserActions {
+  CLOSE_APPOINTMENT_FORM = "CLOSE_APPOINTMENT_FORM",
+  COMPLETE_APPOINTMENT_FORM = "COMPLETE_APPOINTMENT_FORM",
+  CLOSE_ESCALATION_FORM = "CLOSE_ESCALATION_FORM",
+  COMPLETE_ESCALATION_FORM = "COMPLETE_ESCALATION_FORM",
 }
