@@ -1,4 +1,4 @@
-import { RoleEnum } from "@/enums";
+import { RoleEnum, UserActions } from "@/enums";
 import { IBot, IMessage } from "@/models";
 import {
   AppointmentService,
@@ -6,6 +6,8 @@ import {
   ConversationService,
   KnowledgeBaseService,
 } from "@/services";
+import fs from "fs";
+import path from "path";
 
 export class McpService {
   private static instance: McpService;
@@ -35,12 +37,16 @@ export class McpService {
     conversationId,
     businessId,
     userQuery,
+    liveChat = false,
+    action,
   }: {
     bot: IBot;
     appointmentId: string;
     conversationId: string;
     businessId: string;
     userQuery: string;
+    liveChat?: boolean;
+    action?: UserActions;
   }) {
     const botId = bot._id.toString();
 
@@ -66,12 +72,17 @@ export class McpService {
       userQuery
     );
 
+    // Skip KB extraction if the operation is a form completion or cancellation
+    let shouldExtractKB = true;
+    if (action) shouldExtractKB = false;
     // Extract relevant knowledge base
-    const extractedKB = await this.knowledgeBaseService.extractKnowledgeBase(
-      bot,
-      businessId,
-      userQuery
-    );
+    const extractedKB = shouldExtractKB
+      ? await this.knowledgeBaseService.extractKnowledgeBase(
+          bot,
+          businessId,
+          userQuery
+        )
+      : "";
 
     // Get custom instructions
     const customInstruction =
@@ -86,7 +97,9 @@ export class McpService {
       extractedKB,
       customInstruction,
       currentDate,
-      appointmentContext
+      appointmentContext,
+      liveChat,
+      action
     );
 
     // Messages array for LLM
@@ -137,10 +150,32 @@ export class McpService {
     extractedKB: string,
     customInstruction: string,
     currentDate: string,
-    appointmentContext: string
+    appointmentContext: string,
+    liveChat: boolean,
+    action?: UserActions
   ) {
-    return `
-    You are an advanced intent detection and response assistant for a business chatbot.
+    let filePath: string;
+
+    if (liveChat) {
+      filePath = path.resolve(__dirname, "../../data/live_chat_prompt.txt");
+    } else {
+      filePath = path.resolve(__dirname, "../../data/training_prompt.txt");
+    }
+
+    try {
+      const fileContent = fs.readFileSync(filePath, "utf8");
+      const prompt = fileContent
+        .replace("{{summaries}}", summaries.join("\n"))
+        .replace("{{extractedKB}}", extractedKB)
+        .replace("{{customInstruction}}", customInstruction)
+        .replace("{{currentDate}}", currentDate)
+        .replace("{{appointmentContext}}", appointmentContext)
+        .replace("{{userAction}}", action ?? "IGNORE");
+
+      return prompt;
+    } catch (error) {
+      return `
+      You are an advanced intent detection and response assistant for a business chatbot.
 
     CLASSIFICATION INTENTS:
     - BOOK_APPOINTMENT: User wants to book/schedule an appointment
@@ -207,8 +242,9 @@ export class McpService {
     7. Extract parameters accurately (email format, date as YYYY-MM-DD, time as HH:MM)
     8. Treat relative dates like "next Friday", "tomorrow", "next tomorrow" relative to the current date: ${currentDate}
     9. Never use Knowledge Base data as function parameters - only use actual user input
-
+    
     Your response must be valid JSON with "intent", "message", and optional "parameters" fields.`;
+    }
   }
 
   buildMessages({
