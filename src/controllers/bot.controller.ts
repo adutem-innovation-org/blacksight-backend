@@ -1,6 +1,8 @@
 import {
   AskChatbotDto,
   ConfigureBotDto,
+  EscalateChatDto,
+  ScheduleAppointmentDto,
   StartConversationDto,
   TranscribeChatAudioDto,
   UpdateBotConfigurationDto,
@@ -8,7 +10,7 @@ import {
 } from "@/decorators";
 import { sendSuccessResponse, throwUnprocessableEntityError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
-import { BotService, ConversationService } from "@/services";
+import { AgentService, BotService, ConversationService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
@@ -16,10 +18,12 @@ export class BotController {
   private static instance: BotController;
   private readonly botService: BotService;
   private readonly conversationService: ConversationService;
+  private readonly _agentService: AgentService;
 
   constructor() {
     this.botService = BotService.getInstance();
     this.conversationService = ConversationService.getInstance();
+    this._agentService = AgentService.getInstance();
   }
 
   static getInstance() {
@@ -163,6 +167,34 @@ export class BotController {
       req.file,
       req.body
     );
+    return sendSuccessResponse(res, data);
+  };
+
+  scheduleAppointment = async (
+    req: GenericReq<ScheduleAppointmentDto>,
+    res: Response
+  ) => {
+    const { botId: agentId, conversationId: sessionId, ...rest } = req.body;
+
+    const data = await this._agentService.bookAppointment(
+      req.authData!,
+      agentId,
+      sessionId,
+      rest
+    );
+
+    return sendSuccessResponse(res, data);
+  };
+
+  escalateChat = async (req: GenericReq<EscalateChatDto>, res: Response) => {
+    const { botId: agentId, conversationId: sessionId, ...rest } = req.body;
+    const data = await this._agentService.submitTicket(
+      req.authData!,
+      agentId,
+      sessionId,
+      rest
+    );
+
     return sendSuccessResponse(res, data);
   };
 }

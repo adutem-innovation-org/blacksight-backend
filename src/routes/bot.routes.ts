@@ -3,6 +3,8 @@ import { BotController } from "@/controllers";
 import {
   AskChatbotDto,
   ConfigureBotDto,
+  EscalateChatDto,
+  ScheduleAppointmentDto,
   StartConversationDto,
   TranscribeChatAudioDto,
   UpdateBotConfigurationDto,
@@ -116,4 +118,16 @@ botRouter.post(
   }),
   validateDTO(TranscribeChatAudioDto),
   botController.speechToText
+);
+
+botRouter.post(
+  "/conversation/training/schedule-appointment",
+  validateDTO(ScheduleAppointmentDto),
+  botController.scheduleAppointment
+);
+
+botRouter.post(
+  "/conversation/training/escalate-chat",
+  validateDTO(EscalateChatDto),
+  botController.escalateChat
 );

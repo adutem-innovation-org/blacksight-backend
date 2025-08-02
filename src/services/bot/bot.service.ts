@@ -430,15 +430,35 @@ export class BotService {
     const { userQuery, botId, conversationId } = body;
     const businessId = authData.userId.toString();
 
-    return await this.chat(
+    // return await this.chat(
+    //   botId,
+    //   conversationId,
+    //   businessId,
+    //   userQuery,
+    //   authData
+    // );
+    return await this.liveChat({
       botId,
       conversationId,
       businessId,
-      userQuery,
-      authData
-    );
+      data: { userQuery, action: body?.action },
+      authData,
+    });
   }
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * @description This service method is used to simulate a conversation between a user and a configured
+   * chatbot. It will detect the user's intent and generate a response based on the configured knowledge base.
+   * @param botId The configured chatbot's id
+   * @param conversationId The current conversation id
+   * @param businessId The business id
+   * @param userQuery The user's query
+   * @param authData The current authenticated user
+   * @returns Promise<{data: IChatMessage}>
+   * @deprecated
+   */
+  /*******  4d8ee38e-f314-41c0-8e57-a169bc0389d7  *******/
   async chat(
     botId: string,
     conversationId: string,
@@ -683,6 +703,24 @@ export class BotService {
     };
   }
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Handles the detected intent and triggers the respective action.
+   * The supported actions are:
+   * - INIT_APPOINTMENT: Initializes a new appointment.
+   * - SET_APPOINTMENT_PARAM: Sets a specific parameter for the appointment, such as email or phone.
+   * - SET_APPOINTMENT_DATE_TIME: Sets both date and time for the appointment.
+   * - END_CONVERSATION: Ends the conversation and clears the appointment cache.
+   * @param intentResult The detected intent result from the conversation service.
+   * @param businessId The id of the business.
+   * @param conversationId The id of the conversation.
+   * @param appointmentId The id of the appointment.
+   * @param botId The id of the bot.
+   * @param bot The bot object.
+   * @param appointmentCacheKey The cache key for the appointment.
+   * @deprecated - No longer used
+   */
+  /*******  afa54beb-ee29-496d-bad9-034cdbd953d4  *******/
   private async intentHandler(
     intentResult: any,
     businessId: string,
@@ -816,6 +854,7 @@ export class BotService {
    * @param botId - Identifier of the bot handling the conversation.
    * @param appointmentId - Identifier for the appointment being managed.
    * @param providerId - (Optional) Identifier for the meeting provider if applicable.
+   * @deprecated - No longer used in favor of widget based appointment booking
    */
 
   /*******  aefebfab-cf51-453f-ad39-9ed1a9c4abe3  *******/
