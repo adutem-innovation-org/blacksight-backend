@@ -107,16 +107,16 @@ export class BookingEventService {
 
       if (
         !appointment.customerEmail ||
-        !appointment.appointmentTime ||
-        !appointment.appointmentDate
+        !appointment.appointmentTimeInCustomerTimezone ||
+        !appointment.appointmentDateInCustomerTimezone
       ) {
         return;
       }
 
-      let startTime = appointment?.dateTime?.toISOString();
+      let startTime = appointment?.dateTimeInCustomerTimezone?.toISOString();
       if (!startTime) {
-        const date = appointment.appointmentDate; // e.g. "2025-06-06"
-        let time = appointment.appointmentTime; // e.g. "17:00" or "17:00:00+04:00"
+        const date = appointment.appointmentDateInCustomerTimezone; // e.g. "2025-06-06"
+        let time = appointment.appointmentTimeInCustomerTimezone; // e.g. "17:00" or "17:00:00+04:00"
 
         // Strip timezone offset if present
         time = time.split("+")[0].split("-")[0]; // removes "+04:00" or "-03:00" etc.
@@ -149,6 +149,7 @@ export class BookingEventService {
         startTime,
         endTime,
         summary: appointment.summary ?? "Appointment booking",
+        timeZone: appointment.timezone,
       });
 
       await this.appointmentModel.findByIdAndUpdate(appointment._id, {
