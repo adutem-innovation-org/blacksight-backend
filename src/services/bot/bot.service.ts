@@ -4,6 +4,7 @@ import {
   ConversationMode,
   Events,
   Intent,
+  LiveAgentIntent,
   RoleEnum,
   TTL,
 } from "@/enums";
@@ -13,6 +14,7 @@ import {
   UpdateBotConfigurationDto,
   UpdateBotInstructionsDto,
   TranscribeChatAudioDto,
+  AskAgentDto,
 } from "@/decorators";
 import {
   isOwner,
@@ -46,7 +48,11 @@ import { Model, Types } from "mongoose";
 import { ConversationService } from "./conversation.service";
 import OpenAI from "openai";
 import { config } from "@/config";
-import { intentActionsMapper } from "@/constants";
+import {
+  functionToIntentMapper,
+  intentActionsMapper,
+  liveAgentIntentActionsMapper,
+} from "@/constants";
 import EventEmitter2 from "eventemitter2";
 import { Logger } from "winston";
 import { logger } from "@/logging";
@@ -540,7 +546,142 @@ export class BotService {
     return { data: botResponse };
   }
 
-  async liveChat(authData: AuthData, body: AskChatbotDto) {}
+  async liveChat({
+    botId,
+    conversationId,
+    businessId,
+    data,
+    authData,
+  }: {
+    botId: string;
+    conversationId: string;
+    businessId: string;
+    data: AskAgentDto;
+    authData: AuthData;
+  }) {
+    const bot = await this.getBotConfig(botId);
+    const userQuery = data.userQuery;
+
+    // Get current appointment context
+    const { appointmentId, appointmentCacheKey } =
+      await this.appointmentService.getOrCreateAppointmentContext(
+        conversationId
+      );
+
+    // Build context with MCP
+    const {
+      messages,
+      summaries,
+      customInstruction,
+      extractedKB,
+      unsummarizedMessages,
+    } = await this.mcpService.buildMCPContext({
+      appointmentId,
+      bot,
+      businessId,
+      conversationId,
+      userQuery,
+      liveChat: true,
+      action: data.action,
+    });
+
+    // Detect intent with function calling
+    let intentResult =
+      await this.conversationService.detectUserIntentWithFunctions(
+        messages,
+        true
+      );
+
+    const { promptTokens, responseTokens, cachedTokens } = intentResult.usage;
+
+    BotService.eventEmitter.emit(Events.CHARGE_CHAT_COMPLETION, {
+      promptTokens,
+      responseTokens,
+      cachedTokens,
+      botId,
+      businessId,
+      userId: authData.userId,
+      sessionId: conversationId,
+    });
+
+    // If both intent and message are missing, retry once
+    if (
+      !intentResult.intent &&
+      !intentResult.message &&
+      !intentResult.functionCalls?.length
+    ) {
+      console.log("Retrying intent detection...");
+      intentResult =
+        await this.conversationService.detectUserIntentWithFunctions(
+          messages,
+          true
+        );
+    }
+
+    // Apply function-to-intent mapping if needed
+    if (intentResult.functionCalls?.length > 0 && !intentResult.intent) {
+      const functionName = intentResult.functionCalls[0].name;
+      const mappedResponse = functionToIntentMapper[functionName];
+
+      if (mappedResponse) {
+        intentResult.intent = mappedResponse.intent;
+        intentResult.message = mappedResponse.message;
+        console.log(
+          `Mapped function ${functionName} to intent ${mappedResponse.intent}`
+        );
+      }
+    }
+
+    // Updated fallback condition
+    const shouldFallbackToContext =
+      !intentResult.intent &&
+      !intentResult.functionCalls?.length &&
+      (!intentResult.message || intentResult.message.length < 20);
+
+    let botResponse;
+
+    if (shouldFallbackToContext) {
+      console.log("Falling back to contextual response");
+
+      // For general inquiries, generate a more contextual response
+      const lastAction =
+        liveAgentIntentActionsMapper[intentResult.intent as LiveAgentIntent] ||
+        liveAgentIntentActionsMapper[LiveAgentIntent.GENERAL_INQUIRY];
+
+      const prompt = this.mcpService.createContextualPrompt(
+        summaries,
+        extractedKB,
+        customInstruction,
+        lastAction
+      );
+
+      const contextMessages = this.mcpService.buildMessages({
+        prompt,
+        userQuery,
+        unsummarizedMessages,
+      });
+
+      botResponse = await this.conversationService.generateContextualResponse({
+        intentResult,
+        messages: contextMessages,
+      });
+    } else {
+      botResponse = {
+        role: RoleEnum.ASSISTANT,
+        content: intentResult.message,
+      };
+    }
+
+    // Save bot response
+    await this.conversationService.saveBotResponse(conversationId, botResponse);
+
+    return {
+      data: {
+        ...botResponse,
+        action: intentResult.intent,
+      },
+    };
+  }
 
   private async intentHandler(
     intentResult: any,
@@ -663,6 +804,21 @@ export class BotService {
   //   }
   // }
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Handles various function calls related to appointment booking and management.
+   * Emits events based on the function call name with relevant parameters extracted
+   * from the function call arguments.
+   *
+   * @param functionCalls - Array of function call objects containing name and arguments.
+   * @param businessId - Identifier for the business associated with the appointment.
+   * @param conversationId - Identifier for the conversation session.
+   * @param botId - Identifier of the bot handling the conversation.
+   * @param appointmentId - Identifier for the appointment being managed.
+   * @param providerId - (Optional) Identifier for the meeting provider if applicable.
+   */
+
+  /*******  aefebfab-cf51-453f-ad39-9ed1a9c4abe3  *******/
   private async handleFunctionCalls(
     functionCalls: any[],
     businessId: string,
@@ -752,6 +908,15 @@ export class BotService {
     }
   }
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Get the training conversation associated with a given bot and business.
+   * @param auth Authenticated user
+   * @param botId ID of the bot
+   * @returns The training conversation with messages, conversationId, and botId
+   * @throws {NotFoundError} - if the conversation is not found
+   */
+  /*******  182244da-d6dc-4b20-befa-69e4fa5ce313  *******/
   async getTrainingConversation(auth: AuthData, botId: string) {
     const trainingConversation = await this.conversationModel.findOne({
       mode: ConversationMode.TRAINING,
@@ -770,6 +935,16 @@ export class BotService {
     };
   }
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Clear a training conversation for a given bot.
+   * @param auth - authenticated user
+   * @param botId - id of the bot
+   * @param conversationId - id of the conversation
+   * @returns {Promise<{message: string, conversation: IConversation}>}
+   * @throws {NotFoundError} - throws if the conversation is not found
+   */
+  /*******  1e022aca-dd30-4658-adcd-f96cc143122e  *******/
   async clearTrainingConversation(
     auth: AuthData,
     botId: string,
