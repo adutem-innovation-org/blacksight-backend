@@ -1,6 +1,6 @@
 import { WHISPERAI_AUDIO_MIMETYPES } from "@/constants";
 import { AgentController } from "@/controllers";
-import { AskAgentDto } from "@/decorators";
+import { AskAgentDto, BookingRequestDto, SubmitTicketDto } from "@/decorators";
 import { createRouter } from "@/helpers";
 import {
   extractSessionId,
@@ -29,4 +29,16 @@ agentRouter.post(
     },
   }),
   agentController.transcribeSpeech
+);
+
+agentRouter.post(
+  "/book-appointment",
+  validateDTO(BookingRequestDto),
+  agentController.bookAppointment
+);
+
+agentRouter.post(
+  "/submit-ticket",
+  validateDTO(SubmitTicketDto),
+  agentController.submitTicket
 );

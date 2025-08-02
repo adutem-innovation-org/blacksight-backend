@@ -1,4 +1,4 @@
-import { AskAgentDto } from "@/decorators";
+import { AskAgentDto, BookingRequestDto, SubmitTicketDto } from "@/decorators";
 import { sendSuccessResponse, throwUnprocessableEntityError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { AgentService } from "@/services";
@@ -54,6 +54,35 @@ export class AgentController {
       req.file,
       agentId
     );
+    return sendSuccessResponse(res, data);
+  };
+
+  bookAppointment = async (
+    req: GenericReq<BookingRequestDto>,
+    res: Response
+  ) => {
+    const { agentId, sessionId } = this._getAgentAndSessionID(req);
+
+    const data = await this.agentService.bookAppointment(
+      req.authData!,
+      agentId,
+      sessionId,
+      req.body
+    );
+
+    return sendSuccessResponse(res, data);
+  };
+
+  submitTicket = async (req: GenericReq<SubmitTicketDto>, res: Response) => {
+    const { agentId, sessionId } = this._getAgentAndSessionID(req);
+
+    const data = await this.agentService.submitTicket(
+      req.authData!,
+      agentId,
+      sessionId,
+      req.body
+    );
+
     return sendSuccessResponse(res, data);
   };
 

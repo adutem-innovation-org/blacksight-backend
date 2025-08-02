@@ -3,14 +3,17 @@ import { AuthData } from "@/interfaces";
 import { Bot, IBot, IConversation } from "@/models";
 import { Model } from "mongoose";
 import { BotService, ConversationService } from "../bot";
-import { RoleEnum } from "@/enums";
+import { AppointmentStatus, RoleEnum, UserActions } from "@/enums";
 import { AudioConverter, CacheService } from "@/utils";
 import { Types } from "mongoose";
 import fs from "fs";
 import path from "path";
 import { config } from "@/config";
 import OpenAI from "openai";
-import { AskAgentDto } from "@/decorators";
+import { AskAgentDto, BookingRequestDto, SubmitTicketDto } from "@/decorators";
+import { AppointmentService } from "../appointment";
+import { format, fromZonedTime } from "date-fns-tz";
+import { TicketService } from "../ticket";
 
 export class AgentService {
   private static instance: AgentService;
@@ -20,12 +23,16 @@ export class AgentService {
   private readonly botService: BotService;
   private readonly conversationService: ConversationService;
   private readonly cacheService: CacheService;
+  private readonly appointmentService: AppointmentService;
+  private readonly ticketService: TicketService;
   private readonly openai: OpenAI;
 
   constructor() {
     this.botService = BotService.getInstance();
     this.conversationService = ConversationService.getInstance();
     this.cacheService = CacheService.getInstance();
+    this.appointmentService = AppointmentService.getInstance();
+    this.ticketService = TicketService.getInstance();
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
 
@@ -85,13 +92,13 @@ export class AgentService {
     sessionId: string,
     data: AskAgentDto
   ) {
-    return await this.botService.chat(
-      agentId,
-      sessionId,
-      authData.userId.toString(),
-      data.userQuery,
-      authData
-    );
+    return await this.botService.liveChat({
+      botId: agentId,
+      conversationId: sessionId,
+      businessId: authData.userId.toString(),
+      data,
+      authData,
+    });
   }
 
   async speechToText(
@@ -100,13 +107,7 @@ export class AgentService {
     agentId: string
   ) {
     // Get bot configuration
-    let agent: IBot | null = await this.cacheService.get(agentId);
-    if (!agent) {
-      agent = await this.agentModel.findOne({
-        _id: new Types.ObjectId(agentId),
-        businessId: new Types.ObjectId(authData.userId),
-      });
-    }
+    let agent: IBot | null = await this._getAgentConfig(agentId, authData);
     if (!agent) {
       return throwUnprocessableEntityError("Unconfigured bot referenced");
     }
@@ -140,5 +141,126 @@ export class AgentService {
         await fs.promises.unlink(convertedPath);
       } catch (err: any) {}
     }
+  }
+
+  private async _getAgentConfig(agentId: string, authData: AuthData) {
+    let agent: IBot | null = await this.cacheService.get(agentId);
+    if (!agent) {
+      agent = await this.agentModel.findOne({
+        _id: new Types.ObjectId(agentId),
+        businessId: new Types.ObjectId(authData.userId),
+      });
+    }
+    return agent;
+  }
+
+  async bookAppointment(
+    authData: AuthData,
+    agentId: string,
+    sessionId: string,
+    data: BookingRequestDto
+  ) {
+    // Get bot configuration
+    let agent: IBot | null = await this._getAgentConfig(agentId, authData);
+    if (!agent) {
+      return throwUnprocessableEntityError("Unconfigured bot referenced");
+    }
+
+    // Get current appointment context
+    const { appointmentId, appointmentCacheKey } =
+      await this.appointmentService.getOrCreateAppointmentContext(sessionId);
+
+    // Convert local time in the given timezone to UTC
+    const utcDate = fromZonedTime(data.dateTime, data.timezone);
+
+    // Format UTC date and time parts
+    const appointmentDate = format(utcDate, "yyyy-MM-dd"); // e.g. "2025-08-02"
+    const appointmentTime = format(utcDate, "HH:mm"); // e.g. "00:30"
+    const appointmentDateInCustomerTimezone = format(
+      data.dateTime,
+      "yyyy-MM-dd"
+    );
+    const appointmentTimeInCustomerTimezone = format(data.dateTime, "HH:mm");
+
+    // Schedule an appointment
+    const appointmentData = {
+      _id: appointmentId,
+      businessId: authData.userId,
+      botId: agentId,
+      providerId: agent?.meetingProviderId,
+      conversationId: sessionId,
+      customerEmail: data.customerEmail,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
+      appointmentDateInCustomerTimezone,
+      appointmentTimeInCustomerTimezone,
+      appointmentDateInUTC: appointmentDate,
+      appointmentTimeInUTC: appointmentTime,
+      timezone: data.timezone,
+      dateTimeInCustomerTimezone: data.dateTime,
+      dateTimeInUTC: utcDate,
+      status: AppointmentStatus.SCHEDULED,
+    };
+
+    let result = await this.appointmentService.bookAppointment(appointmentData);
+
+    const botResponse = await this.ask(authData, agentId, sessionId, {
+      userQuery: `Booked an appointment to be held on ${appointmentDateInCustomerTimezone} at ${appointmentTimeInCustomerTimezone} ${data.timezone} time.`,
+      action: UserActions.COMPLETE_APPOINTMENT_FORM,
+    });
+
+    try {
+    } catch (error) {
+      await this.cacheService.delete(appointmentCacheKey);
+    }
+
+    return {
+      chatData: [
+        {
+          role: RoleEnum.USER,
+          content: `Booked an appointment to be held on ${appointmentDateInCustomerTimezone} at ${appointmentTimeInCustomerTimezone} ${data.timezone} time.`,
+        },
+        botResponse.data,
+      ],
+    };
+  }
+
+  async submitTicket(
+    authData: AuthData,
+    agentId: string,
+    sessionId: string,
+    data: SubmitTicketDto
+  ) {
+    // Get bot configuration
+    let agent: IBot | null = await this._getAgentConfig(agentId, authData);
+    if (!agent) {
+      return throwUnprocessableEntityError("Unconfigured bot referenced");
+    }
+
+    const ticketData = {
+      businessId: authData.userId,
+      sessionId,
+      botId: agentId,
+      customerEmail: data.customerEmail,
+      customerName: data.customerName,
+      message: data.message,
+    };
+
+    await this.ticketService.openOrUpdateTicket(ticketData);
+
+    const botResponse = await this.ask(authData, agentId, sessionId, {
+      userQuery: `Submitted a ticket for ${data.customerName} using email ${data.customerEmail}.`,
+      action: UserActions.COMPLETE_ESCALATION_FORM,
+    });
+
+    return {
+      chatData: [
+        {
+          role: RoleEnum.USER,
+          content: `Submitted a ticket for ${data.customerName} using email ${data.customerEmail}.`,
+        },
+        botResponse.data,
+      ],
+    };
   }
 }
