@@ -1,7 +1,7 @@
 import { config } from "@/config";
 import { intentActionsMapper } from "@/constants";
 import { Intent, RoleEnum, UserTypes } from "@/enums";
-import { appointmentFunctions } from "@/functions";
+import { appointmentFunctions, liveAgentFunctions } from "@/functions";
 import { logJsonError } from "@/helpers";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
@@ -12,7 +12,10 @@ import {
   IConversation,
   IMessage,
 } from "@/models";
-import { intentDetectionSchema } from "@/schema";
+import {
+  intentDetectionSchema,
+  liveAgentIntentDetectionSchema,
+} from "@/schema";
 import { CacheService, PaginationService } from "@/utils";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { Model, Types } from "mongoose";
@@ -228,19 +231,24 @@ export class ConversationService {
     return summaryResponse.choices[0].message.content ?? "";
   }
 
-  async detectUserIntentWithFunctions(messages: IMessage[]) {
+  async detectUserIntentWithFunctions(
+    messages: IMessage[],
+    liveChat: boolean = false
+  ) {
     try {
       const openaiResponse = await this.openai.chat.completions.create({
         model: "gpt-4o", // Use latest model for better function calling
         messages,
         temperature: 0.1, // Lower temperature for more consistent responses
-        functions: appointmentFunctions,
+        functions: liveChat ? liveAgentFunctions : appointmentFunctions,
         function_call: "auto",
         response_format: {
           type: "json_schema",
           json_schema: {
             name: "intent_response",
-            schema: intentDetectionSchema,
+            schema: liveChat
+              ? liveAgentIntentDetectionSchema
+              : intentDetectionSchema,
             strict: true,
           },
         },
