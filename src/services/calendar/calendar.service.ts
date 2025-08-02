@@ -117,14 +117,14 @@ export class CalendarService {
     startTime,
     endTime,
     summary,
-    timeZone = "America/Los_Angeles",
+    timeZone,
   }: {
     provider: ICalendarProvider;
     customerEmail: string;
     startTime: string;
     endTime: string;
     summary: string;
-    timeZone?: string;
+    timeZone: string;
   }) {
     const oauthClient = this.googleCalenderService.getOauthClient();
 
