@@ -58,9 +58,9 @@ export class AppointmentService {
       this._initAppointment(payload)
     );
 
-    this.eventEmitter.on(Events.SET_APPOINTMENT_PARAM, (payload) =>
-      this._setAppointmentParam(payload)
-    );
+    // this.eventEmitter.on(Events.SET_APPOINTMENT_PARAM, (payload) =>
+    //   this._setAppointmentParam(payload)
+    // );
   }
 
   private async _initAppointment(payload: {
@@ -118,83 +118,83 @@ export class AppointmentService {
     }
   }
 
-  private async _setAppointmentParam(payload: {
-    param: AppointmentParam;
-    value: any;
-    conversationId: string;
-    businessId: string;
-    appointmentId: string;
-  }) {
-    try {
-      const { param, value, conversationId, businessId, appointmentId } =
-        payload;
+  // private async _setAppointmentParam(payload: {
+  //   param: AppointmentParam;
+  //   value: any;
+  //   conversationId: string;
+  //   businessId: string;
+  //   appointmentId: string;
+  // }) {
+  //   try {
+  //     const { param, value, conversationId, businessId, appointmentId } =
+  //       payload;
 
-      console.log("Data >> ", payload);
+  //     console.log("Data >> ", payload);
 
-      if (!appointmentId)
-        return throwUnprocessableEntityError(
-          "Cannot set appointment with missing id"
-        );
+  //     if (!appointmentId)
+  //       return throwUnprocessableEntityError(
+  //         "Cannot set appointment with missing id"
+  //       );
 
-      let valueToSet: Record<string, any> = {
-        businessId,
-        conversationId,
-      };
+  //     let valueToSet: Record<string, any> = {
+  //       businessId,
+  //       conversationId,
+  //     };
 
-      switch (param) {
-        case AppointmentParam.DATE:
-          valueToSet["appointmentDate"] = value.date;
-          if (value.time) {
-            valueToSet["appointmentTime"] = value.time;
-          }
-          break;
-        case AppointmentParam.TIME:
-          valueToSet["appointmentTime"] = value;
-          break;
-        case AppointmentParam.EMAIL:
-          valueToSet["customerEmail"] = value;
-          break;
-        case AppointmentParam.NAME:
-          valueToSet["customerName"] = value;
-          break;
-        case AppointmentParam.PHONE:
-          valueToSet["customerPhone"] = value;
-          break;
-        case AppointmentParam.DATE_TIME:
-          if (value.date) {
-            valueToSet["appointmentDate"] = value.date;
-          }
-          if (value.time) {
-            valueToSet["appointmentTime"] = value.time;
-          }
-          break;
-        default:
-          break;
-      }
+  //     switch (param) {
+  //       case AppointmentParam.DATE:
+  //         valueToSet["appointmentDate"] = value.date;
+  //         if (value.time) {
+  //           valueToSet["appointmentTime"] = value.time;
+  //         }
+  //         break;
+  //       case AppointmentParam.TIME:
+  //         valueToSet["appointmentTime"] = value;
+  //         break;
+  //       case AppointmentParam.EMAIL:
+  //         valueToSet["customerEmail"] = value;
+  //         break;
+  //       case AppointmentParam.NAME:
+  //         valueToSet["customerName"] = value;
+  //         break;
+  //       case AppointmentParam.PHONE:
+  //         valueToSet["customerPhone"] = value;
+  //         break;
+  //       case AppointmentParam.DATE_TIME:
+  //         if (value.date) {
+  //           valueToSet["appointmentDate"] = value.date;
+  //         }
+  //         if (value.time) {
+  //           valueToSet["appointmentTime"] = value.time;
+  //         }
+  //         break;
+  //       default:
+  //         break;
+  //     }
 
-      console.log("Appointment data to be set >> ", valueToSet);
+  //     console.log("Appointment data to be set >> ", valueToSet);
 
-      let appointment = await this.appointmentModel.findByIdAndUpdate(
-        appointmentId,
-        valueToSet,
-        { new: true, upsert: true }
-      );
+  //     let appointment = await this.appointmentModel.findByIdAndUpdate(
+  //       appointmentId,
+  //       valueToSet,
+  //       { new: true, upsert: true }
+  //     );
 
-      // Updated condition to include name and phone for complete appointment
-      if (
-        appointment.appointmentDate &&
-        appointment.appointmentTime &&
-        appointment.customerEmail &&
-        appointment.customerName &&
-        appointment.customerPhone
-      ) {
-        appointment.status = AppointmentStatus.SCHEDULED;
-        await appointment.save();
-      }
-    } catch (error) {
-      AppointmentService.jsonErrorLogger(error);
-    }
-  }
+  //     // Updated condition to include name and phone for complete appointment
+  //     if (
+  //       appointment.appointmentDate &&
+  //       appointment.appointmentTime &&
+  //       appointment.customerEmail &&
+  //       appointment.customerName &&
+  //       appointment.customerPhone
+  //     ) {
+  //       appointment.status = AppointmentStatus.SCHEDULED;
+  //       await appointment.save();
+  //     }
+  //   } catch (error) {
+  //     AppointmentService.jsonErrorLogger(error);
+  //   }
+  // }
 
   /**
    * Create a session appointment context
@@ -347,6 +347,10 @@ export class AppointmentService {
       },
       { upsert: true, new: true }
     );
+  }
+
+  async bookAppointment(data: any) {
+    return await this.appointmentModel.create(data);
   }
 
   async getAllAppointments(auth: AuthData) {
