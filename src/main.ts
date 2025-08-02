@@ -2,6 +2,7 @@ import "express-async-errors";
 import "module-alias/register";
 import { addAliases } from "module-alias";
 import { resolve } from "path";
+import compression from "compression";
 
 addAliases({
   "@": resolve(__dirname, "../src"),
@@ -39,6 +40,21 @@ app.use(
       ...config.corsOrigins,
     ],
     credentials: true,
+  })
+);
+
+// Moderate compression setup
+app.use(
+  compression({
+    threshold: 4096, // 4kb
+    level: 6,
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) {
+        // Bypass compression for specific client request
+        return false;
+      }
+      return compression.filter(req, res);
+    },
   })
 );
 
