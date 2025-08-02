@@ -1,4 +1,4 @@
-import { defaultInstruction } from "@/constants";
+import { defaultInstruction, newDefaultInstruction } from "@/constants";
 import { BotStatus } from "@/enums";
 import { Types, Model, model, Schema, Document } from "mongoose";
 import { IKnowledgeBase } from "../knowledge-base";
@@ -35,7 +35,7 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
     },
     instructions: {
       type: String,
-      default: defaultInstruction,
+      default: newDefaultInstruction,
     },
     scheduleMeeting: {
       type: Boolean,
@@ -56,7 +56,7 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
         },
         "Please provide meeting provider",
       ],
-      ref: "meeting-providers",
+      ref: "calendar-providers",
     },
     status: {
       type: String,

@@ -107,4 +107,4 @@ const CalendarProviderSchema: Schema<ICalendarProvider> =
   );
 
 export const CalendarProvider: Model<ICalendarProvider> =
-  model<ICalendarProvider>("meeting-providers", CalendarProviderSchema);
+  model<ICalendarProvider>("calendar-providers", CalendarProviderSchema);

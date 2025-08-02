@@ -9,22 +9,27 @@ export interface IAppointment extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   botId: Types.ObjectId;
   bot?: Types.Map<any>; // Virtual property
-  providerId: Types.ObjectId;
+  providerId?: Types.ObjectId;
   provider?: Types.Map<any>; // Virtual property
   conversationId: string;
   customerEmail: string;
   customerName: string;
   customerPhone: string;
-  appointmentDate: string;
-  appointmentTime: string;
+  appointmentDateInCustomerTimezone: string;
+  appointmentTimeInCustomerTimezone: string;
+  appointmentDateInUTC: string;
+  appointmentTimeInUTC: string;
+  timezone: string;
+  dateTimeInCustomerTimezone: Date;
+  dateTimeInUTC: Date;
   duration: number;
   meetingLink?: string;
   status: AppointmentStatus;
-  dateTime?: Date; // Virtual property
-  notificationSent: boolean;
+  confirmationEmailSent: boolean;
   metadata: Types.Map<any>;
   scheduledByProvider: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Define the Appointment Schema
@@ -45,7 +50,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     },
     providerId: {
       type: Schema.Types.ObjectId,
-      ref: "meeting-providers",
+      ref: "calendar-providers",
     },
     conversationId: {
       type: String,
@@ -54,15 +59,44 @@ const AppointmentSchema = new Schema<IAppointment>(
     customerEmail: {
       type: String,
       match: [emailRegex, "Please provide a valid email"],
+      required: [true, "Customer email is required"],
     },
     customerName: {
       type: String,
+      required: [true, "Customer name is required"],
     },
     customerPhone: {
       type: String,
+      required: [true, "Customer phone is required"],
     },
-    appointmentDate: { type: String },
-    appointmentTime: { type: String },
+    appointmentDateInCustomerTimezone: {
+      type: String,
+      required: [true, "Appointment date in customer timezone is required"],
+    },
+    appointmentTimeInCustomerTimezone: {
+      type: String,
+      required: [true, "Appointment time in customer timezone is required"],
+    },
+    appointmentDateInUTC: {
+      type: String,
+      required: [true, "Appointment date in UTC is required"],
+    },
+    appointmentTimeInUTC: {
+      type: String,
+      required: [true, "Appointment time in UTC is required"],
+    },
+    timezone: {
+      type: String,
+      required: [true, "Timezone is required"],
+    },
+    dateTimeInCustomerTimezone: {
+      type: Date,
+      required: [true, "Date time in customer timezone is required"],
+    },
+    dateTimeInUTC: {
+      type: Date,
+      required: [true, "Date time in UTC is required"],
+    },
     duration: { type: Number, default: 30 },
     meetingLink: {
       type: String,
@@ -71,9 +105,9 @@ const AppointmentSchema = new Schema<IAppointment>(
     status: {
       type: String,
       enum: Object.values(AppointmentStatus),
-      default: AppointmentStatus.PENDING,
+      default: AppointmentStatus.SCHEDULED,
     },
-    notificationSent: {
+    confirmationEmailSent: {
       type: Boolean,
       default: false,
     },
@@ -94,29 +128,29 @@ const AppointmentSchema = new Schema<IAppointment>(
 );
 
 AppointmentSchema.virtual("provider", {
-  ref: "meeting-providers",
+  ref: "calendar-providers",
   localField: "providerId",
   foreignField: "_id",
   justOne: true,
 });
 
 // Virtual to combine date and time into one Date object
-AppointmentSchema.virtual("dateTime").get(function () {
-  if (!this.appointmentDate || !this.appointmentTime) return null;
-  const date = new Date(this.appointmentDate.toString());
-  const time = new Date(this.appointmentTime.toString());
-  if (date && time) {
-    return new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      time.getHours(),
-      time.getMinutes(),
-      time.getSeconds()
-    );
-  }
-  return null;
-});
+// AppointmentSchema.virtual("dateTime").get(function () {
+//   if (!this.appointmentDate || !this.appointmentTime) return null;
+//   const date = new Date(this.appointmentDate.toString());
+//   const time = new Date(this.appointmentTime.toString());
+//   if (date && time) {
+//     return new Date(
+//       date.getFullYear(),
+//       date.getMonth(),
+//       date.getDate(),
+//       time.getHours(),
+//       time.getMinutes(),
+//       time.getSeconds()
+//     );
+//   }
+//   return null;
+// });
 
 AppointmentSchema.virtual("bot", {
   ref: "bots",
@@ -142,7 +176,9 @@ AppointmentSchema.pre("findOneAndUpdate", autoPopulate);
 AppointmentSchema.index({ businessId: 1 });
 AppointmentSchema.index({ conversationId: 1 });
 AppointmentSchema.index({ botId: 1 });
-AppointmentSchema.index({ appointmentDate: 1 });
+AppointmentSchema.index({ appointmentDateInUTC: 1 });
+AppointmentSchema.index({ appointmentTimeInUTC: 1 });
+AppointmentSchema.index({ dateTimeInUTC: 1 });
 AppointmentSchema.index({ customerEmail: 1 });
 AppointmentSchema.index({ customerName: 1 });
 
