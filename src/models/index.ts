@@ -14,3 +14,4 @@ export * from "./wallet";
 export * from "./settings";
 export * from "./transaction";
 export * from "./templates";
+export * from "./ticket";

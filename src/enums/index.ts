@@ -15,3 +15,4 @@ export * from "./token";
 export * from "./wallet";
 export * from "./transaction";
 export * from "./templates";
+export * from "./ticket";
