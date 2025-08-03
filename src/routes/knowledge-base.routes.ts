@@ -4,6 +4,7 @@ import { KnowledgeBaseSources, UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
   permissionRequirement,
+  rateLimiter,
   uploadSingleFile,
   validateDTO,
   validateToken,
@@ -19,8 +20,13 @@ knowledgeBaseRouter.get(
   knowledgeBaseController.knowledgeBaseAnaylytics
 );
 
+// Can only upload 10 knowledge base in 5 minutes
 knowledgeBaseRouter.post(
   "/create",
+  rateLimiter({
+    limit: 10,
+    ttl: 5 * 60 * 1000,
+  }),
   permissionRequirement([UserTypes.USER]),
   uploadSingleFile({
     name: "file",
