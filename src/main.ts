@@ -3,6 +3,7 @@ import "module-alias/register";
 import { addAliases } from "module-alias";
 import { resolve } from "path";
 import compression from "compression";
+import helmet from "helmet";
 
 addAliases({
   "@": resolve(__dirname, "../src"),
@@ -17,6 +18,7 @@ import {
   fileRequestLogger,
   consoleRequestLogger,
   routeNotFound,
+  rateLimiter,
 } from "./middlewares";
 import { config } from "./config";
 import { logger } from "./logging";
@@ -29,6 +31,24 @@ const app = express();
 
 // Create node server
 const server = http.createServer(app);
+
+// Rate limiter
+app.use(rateLimiter({ limit: 500, ttl: 15 * 60 * 1000 }));
+
+// Security middleware
+/* Not very useful since we are not sending SSR templates or serving our own static files */
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  })
+);
 
 app.use(
   cors({
