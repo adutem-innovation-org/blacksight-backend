@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 
 export * from "./auth";
 export * from "./appointment";
+export * from "./helper.interfaces";
 
 export interface GenericReq<T> extends Request<any, any, T> {}
 
