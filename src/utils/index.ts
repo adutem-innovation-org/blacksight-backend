@@ -6,3 +6,4 @@ export * from "./pagination";
 export * from "./storage";
 export * from "./media";
 export * from "./mcp";
+export * from "./scrape.service";

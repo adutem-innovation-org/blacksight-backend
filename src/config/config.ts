@@ -110,4 +110,11 @@ export const config = {
       process.env.TRANSCRIPTION_MARK_UP_PERCENT!
     ),
   },
+  scraping: {
+    timeout: 30000,
+    maxContentLength: 1_000_000,
+    // userAgent: "ContentBot/1.0 (+https://blacksight.co)",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.129 Safari/537.36",
+  },
 };
