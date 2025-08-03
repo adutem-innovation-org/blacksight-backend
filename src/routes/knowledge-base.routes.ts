@@ -1,5 +1,5 @@
 import { KnowledgeBaseController } from "@/controllers";
-import { AddKnowledgeBaseDto } from "@/decorators";
+import { AddKnowledgeBaseDto, GenerateKnowledgeBaseDto } from "@/decorators";
 import { KnowledgeBaseSources, UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
@@ -43,6 +43,17 @@ knowledgeBaseRouter.post(
   }),
   validateDTO(AddKnowledgeBaseDto),
   knowledgeBaseController.addKnowledgeBase
+);
+
+knowledgeBaseRouter.post(
+  "/generate",
+  rateLimiter({
+    limit: 10,
+    ttl: 5 * 60 * 1000,
+  }),
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(GenerateKnowledgeBaseDto),
+  knowledgeBaseController.generateKnowledgeBase
 );
 
 knowledgeBaseRouter.get(

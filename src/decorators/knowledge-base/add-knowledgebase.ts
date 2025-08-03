@@ -34,18 +34,6 @@ class IsHttpOrHttpsUrl implements ValidatorConstraintInterface {
   }
 }
 
-@ValidatorConstraint({ name: "NoBlockedTerms", async: false })
-class NoBlockedTerms implements ValidatorConstraintInterface {
-  validate(prompt: string, validationArguments?: ValidationArguments) {
-    const blocked = ["hack", "exploit", "malware"];
-    return !blocked.some((term) => prompt.toLowerCase().includes(term));
-  }
-
-  defaultMessage(validationArguments?: ValidationArguments): string {
-    return "Prompt contains blocked content";
-  }
-}
-
 export class AddKnowledgeBaseDto {
   @IsDefined({ message: "Pleae provide tag" })
   @IsString({ message: "Knowledge base tag must be of type string" })
@@ -68,11 +56,9 @@ export class AddKnowledgeBaseDto {
   readonly url?: string;
 
   @ValidateIf((o) => o.source === KnowledgeBaseSources.PROMPT)
-  @IsDefined({ message: "Prompt is required" })
-  @MinLength(1, { message: "Prompt cannot be empty" })
-  @MaxLength(2000, { message: "Prompt too long (max 2000 characters)" })
-  @Validate(NoBlockedTerms)
-  readonly prompt?: string;
+  @IsDefined({ message: "Generated knowledge base is required" })
+  @IsString({ message: "Generated knowledge base must be a string" })
+  readonly generatedKB!: string;
 
   @IsOptional()
   @Type(() => Boolean)

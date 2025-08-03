@@ -1,4 +1,4 @@
-import { AddKnowledgeBaseDto } from "@/decorators";
+import { AddKnowledgeBaseDto, GenerateKnowledgeBaseDto } from "@/decorators";
 import { KnowledgeBaseSources } from "@/enums";
 import { sendSuccessResponse, throwBadRequestError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
@@ -38,6 +38,17 @@ export class KnowledgeBaseController {
       req.file!
     );
     return sendSuccessResponse(res, data, StatusCodes.CREATED);
+  };
+
+  generateKnowledgeBase = async (
+    req: GenericReq<GenerateKnowledgeBaseDto>,
+    res: Response
+  ) => {
+    const data = await this.knowledgeBaseService.generateKnowledgeBase(
+      req.authData!,
+      req.body.prompt
+    );
+    return sendSuccessResponse(res, data);
   };
 
   getAllKnowledgeBase = async (req: Request, res: Response) => {

@@ -115,9 +115,10 @@ export class KnowledgeBaseService {
         case KnowledgeBaseSources.PROMPT:
           /** @todo add prompting */
           // content = body.text ?? "";
-          throwUnprocessableEntityError("Prompting is not supported yet");
+          content = body.generatedKB ?? "";
           break;
         default:
+          throwUnprocessableEntityError("Unsupported source");
           break;
       }
 
@@ -127,6 +128,8 @@ export class KnowledgeBaseService {
       const chunks = content.match(/[^.!?]{1,500}[.!?]/g) || [];
 
       const chunkDocs = [];
+
+      if (chunks.length === 0) throwUnprocessableEntityError("No chunks found");
 
       try {
         for (let i = 0; i < chunks?.length; i++) {
@@ -274,6 +277,54 @@ export class KnowledgeBaseService {
     );
 
     return { content, ...rest };
+  }
+
+  async generateKnowledgeBase(authData: AuthData, prompt: string) {
+    try {
+      const completion = await this.openai.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `Date ${new Date()}
+            You are a business knowledge base generator.
+
+            You are a helpful assistant that generates high-quality content. Please provide informative and accurate responses.
+            
+            Generate industry specific knowledge base for the business below, covering areas such as
+            1. About
+            2. Services
+            3. Products (Where applicable)
+            4. Plans (Where applicable)
+            '
+            `,
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        model: "gpt-4",
+        max_completion_tokens: 4000,
+        temperature: 0.7,
+      });
+
+      const result = completion.choices[0].message.content;
+
+      return { message: "Knowledge base generated.", generatedKB: result };
+    } catch (error: any) {
+      KnowledgeBaseService.logger.error("Unable to generate knowledge base");
+      KnowledgeBaseService.logJsonError(error);
+
+      if (error.code === "insufficient_quota") {
+        console.log("OpenAI quota exceeded");
+      }
+
+      if (error.code === "rate_limit_exceeded") {
+        console.log("OpenAI rate limit exceeded");
+      }
+
+      throwServerError(error?.message || "An unknown error has occurred");
+    }
   }
 
   async extractKnowledgeBase(
