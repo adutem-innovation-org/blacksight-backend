@@ -42,3 +42,7 @@ google.json
 *.staging
 *.production
 nodemon.json
+
+# Others
+*samples
+*artifacts
