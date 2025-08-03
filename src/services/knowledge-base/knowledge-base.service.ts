@@ -3,13 +3,14 @@ import { AddKnowledgeBaseDto } from "@/decorators";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
 import { Bot, IBot, IKnowledgeBase, KnowledgeBase } from "@/models";
-import { eventEmitter, PaginationService } from "@/utils";
+import { eventEmitter, PaginationService, ScrapeService } from "@/utils";
 import { Model, Types } from "mongoose";
 import fs from "fs";
 import path from "path";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import {
+  cleanContent,
   isAdmin,
   isOwnerUser,
   isSuperAdmin,
@@ -17,6 +18,7 @@ import {
   throwForbiddenError,
   throwNotFoundError,
   throwServerError,
+  throwUnprocessableEntityError,
   throwUnsupportedMediaTypeError,
 } from "@/helpers";
 import { Pinecone } from "@pinecone-database/pinecone";
@@ -31,6 +33,7 @@ export class KnowledgeBaseService {
   // Helpers
   private static readonly logJsonError = logJsonError;
   private static readonly logger: Logger = logger;
+  private readonly cleanContent: Function = cleanContent;
 
   static readonly eventEmitter: EventEmitter2 = eventEmitter;
 
@@ -40,12 +43,14 @@ export class KnowledgeBaseService {
   private readonly pinecone: Pinecone;
   private readonly openai: OpenAI;
   private readonly botSharedService: BotSharedService;
+  private readonly scrapingService: ScrapeService;
 
   constructor() {
     this.knowledgeBasePaginationService = new PaginationService(
       this.knowledgeBaseModel
     );
     this.botSharedService = BotSharedService.getInstance();
+    this.scrapingService = ScrapeService.getInstance();
     this.pinecone = new Pinecone({
       apiKey: config.pinecone.apiKey,
       maxRetries: 5,
@@ -90,29 +95,30 @@ export class KnowledgeBaseService {
     try {
       const businessId = auth.userId;
       const documentId = new Types.ObjectId();
+
+      let title = "";
       let content = "";
 
-      if (body.source === KnowledgeBaseSources.FILE) {
-        const ext = path.extname(file.originalname).toLowerCase();
-        switch (ext) {
-          case ".txt":
-          case ".md":
-            content = await fs.promises.readFile(file.path, "utf-8");
-            break;
-          case ".pdf":
-            const file_data = await fs.promises.readFile(file.path);
-            const data = await pdfParse(file_data);
-            content = data.text;
-            break;
-          case ".docx":
-            const result = await mammoth.extractRawText({ path: file.path });
-            content = result.value;
-            break;
-          default:
-            return throwUnsupportedMediaTypeError("Unsupported file type.");
-        }
-      } else {
-        content = body.text ?? "";
+      switch (body.source) {
+        case KnowledgeBaseSources.FILE:
+          content = await this.parseFileContent(file);
+          break;
+        case KnowledgeBaseSources.TEXT_INPUT:
+          content = body.text ?? "";
+          break;
+        case KnowledgeBaseSources.URL:
+          let { title: parsedTitle, content: parsedContent } =
+            await this.parseUrlContent(body.url!);
+          title = parsedTitle;
+          content = parsedContent;
+          break;
+        case KnowledgeBaseSources.PROMPT:
+          /** @todo add prompting */
+          // content = body.text ?? "";
+          throwUnprocessableEntityError("Prompting is not supported yet");
+          break;
+        default:
+          break;
       }
 
       const pineconeIndex = this.pinecone.Index("knowledge-base");
@@ -156,7 +162,23 @@ export class KnowledgeBaseService {
             tag: body.tag,
           },
           {
-            $setOnInsert: { businessId, documentId },
+            $setOnInsert: {
+              businessId,
+              documentId,
+              meta: {
+                source: body.source,
+                title:
+                  body.source === KnowledgeBaseSources.URL ? title : undefined,
+                url:
+                  body.source === KnowledgeBaseSources.URL
+                    ? body.url
+                    : body.url,
+                size:
+                  body.source === KnowledgeBaseSources.FILE && file
+                    ? file.size
+                    : undefined,
+              },
+            },
             $push: { chunks: { $each: chunkDocs } },
           },
           {
@@ -179,11 +201,79 @@ export class KnowledgeBaseService {
         "Cleaning up uploaded knowledge base file."
       );
       try {
-        await fs.promises.unlink(file.path);
+        if (body.source === KnowledgeBaseSources.FILE && file) {
+          await fs.promises.unlink(file.path);
+        }
       } catch (err: any) {
         console.warn("File deletion failed or already removed:", err.message);
       }
     }
+  }
+
+  private async parseFileContent(file: Express.Multer.File) {
+    let content = "";
+    const ext = path.extname(file.originalname).toLowerCase();
+    switch (ext) {
+      case ".txt":
+      case ".md":
+        content = await fs.promises.readFile(file.path, "utf-8");
+        break;
+      case ".pdf":
+        const file_data = await fs.promises.readFile(file.path);
+        const data = await pdfParse(file_data);
+        content = data.text;
+        break;
+      case ".docx":
+        const result = await mammoth.extractRawText({ path: file.path });
+        content = result.value;
+        break;
+      default:
+        break;
+    }
+    return content;
+  }
+
+  private async parseUrlContent(url: string) {
+    const startTime = Date.now();
+    KnowledgeBaseService.logger.info("Starting URL ingestion");
+    KnowledgeBaseService.logger.debug(
+      JSON.stringify(
+        {
+          url,
+          // ip: req.ip
+        },
+        null,
+        2
+      )
+    );
+
+    let content = "";
+
+    const { content: rawHtml, ...rest } =
+      (await this.scrapingService.scrapePage(url))!;
+
+    content = cleanContent(rawHtml, {
+      maxLength: 50_000,
+      removeUrls: true,
+    });
+
+    const processingTime = Date.now() - startTime;
+
+    KnowledgeBaseService.logger.info("URL ingestion completed");
+    KnowledgeBaseService.logger.debug(
+      JSON.stringify(
+        {
+          url,
+          contentLength: content.length,
+          processingTime,
+          // ip: req.ip
+        },
+        null,
+        2
+      )
+    );
+
+    return { content, ...rest };
   }
 
   async extractKnowledgeBase(
@@ -304,10 +394,11 @@ export class KnowledgeBaseService {
     const idsToDelete = knowledgeBase.chunks.map(
       (chunk: any) => `${businessId}-${documentId}-${chunk.chunkId}`
     );
-    console.log(idsToDelete);
 
-    // Delete from Pinecone
-    await pineconeIndex.deleteMany(idsToDelete);
+    if (idsToDelete.length > 0) {
+      // Delete from Pinecone
+      await pineconeIndex.deleteMany(idsToDelete);
+    }
 
     // Deactivate any bot connected to this knowledge base
     await this.botSharedService.deactivateBotsByKbId(auth, id);

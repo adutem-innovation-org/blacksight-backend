@@ -22,6 +22,7 @@ export interface IKnowledgeBase extends Document<Types.ObjectId> {
   documentId: Types.ObjectId;
   chunks: Array<Chunk>;
   isActive: boolean;
+  meta?: Types.Map<any>;
 }
 
 const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
@@ -46,6 +47,9 @@ const KnowledgeBaseSchema: Schema<IKnowledgeBase> = new Schema<IKnowledgeBase>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    meta: {
+      type: Schema.Types.Mixed,
     },
   },
   {
