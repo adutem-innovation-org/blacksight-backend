@@ -49,7 +49,8 @@ export class ScrapeService {
       this.initialized = true;
       ScrapeService.logger.info("Browser initialized successfully");
     } catch (error) {
-      ScrapeService.logger.error("Failed to initialize browser", { error });
+      ScrapeService.logger.error("Failed to initialize browser");
+      ScrapeService.logJsonError(error);
       throw new Error("Scrapper initilization failed");
     }
   }
