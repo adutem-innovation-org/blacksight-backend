@@ -48,3 +48,9 @@ apiKeyRouter.patch(
   permissionRequirement([UserTypes.ADMIN, UserTypes.USER]),
   apiKeyController.activateApiKey
 );
+
+apiKeyRouter.delete(
+  "/delete/:id",
+  permissionRequirement([UserTypes.USER, UserTypes.ADMIN]),
+  apiKeyController.deleteApiKey
+);

@@ -76,4 +76,12 @@ export class ApiKeyController {
     );
     return sendSuccessResponse(res, data);
   };
+
+  deleteApiKey = async (req: Request, res: Response) => {
+    const data = await this.apiKeyService.deleteApiKey(
+      req.authData!,
+      req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
 }

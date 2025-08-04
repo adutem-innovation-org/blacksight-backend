@@ -199,6 +199,25 @@ export class ApiKeyService {
     return { message: "API key deactivated", ...result };
   }
 
+  async deleteApiKey(auth: AuthData, id: string) {
+    const userId = auth.userId.toString();
+    const query: Record<string, any> = { _id: new Types.ObjectId(id) };
+
+    if (auth.userType === UserTypes.USER) {
+      query["ownerId"] = new Types.ObjectId(userId);
+    }
+
+    if (auth.userType === UserTypes.ADMIN && !isSuperAdmin(auth)) {
+      return throwForbiddenError("Forbidden");
+    }
+
+    const apiKey = await this.apiKeyModel.findOneAndDelete(query);
+
+    if (!apiKey) return throwNotFoundError("API key not found");
+
+    return { message: "API key deleted" };
+  }
+
   private _generateApiKey(): { raw: string; hashed: string } {
     const raw = randomBytes(32).toString("hex");
     const hashed = createHash("sha256").update(raw).digest("hex");
