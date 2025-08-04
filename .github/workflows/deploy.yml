@@ -51,10 +51,10 @@ jobs:
         run: |
           ssh ec2-user@${{ secrets.EC2_HOST }} "cd /home/ec2-user/blacksight-backend && \
             PUPPETEER_SKIP_DOWNLOAD=true yarn install --frozen-lockfile && \
-            if ! npx puppeteer browsers installed chrome >/dev/null 2>&1; then \
+            if [ ! -d ~/.cache/puppeteer/chrome ]; then \
               echo 'Installing Chromium for Puppeteer...'; \
               npx puppeteer browsers install chrome; \
             else \
-              echo 'Chromium already installed and working'; \
+              echo 'Chromium already installed, skipping download'; \
             fi && \
             pm2 reload ecosystem.config.js --env production"
