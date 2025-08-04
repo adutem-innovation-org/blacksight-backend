@@ -78,6 +78,8 @@ app.use(
   })
 );
 
+app.set("trust proxy", 1);
+
 app.use(fileRequestLogger());
 app.use(consoleRequestLogger());
 app.use(methodChecker); // Checks if the incoming request method is supported
