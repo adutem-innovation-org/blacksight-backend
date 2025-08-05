@@ -13,4 +13,16 @@ export interface AuthData {
   authId: string;
   userType: UserTypes;
   isSuperAdmin: boolean;
+
+  // For mfa setup
+  mfaEnabled?: boolean;
+  mfaVerified?: boolean;
+  partialAuth?: boolean;
+}
+
+export interface TempAuthData {
+  userId: string;
+  email: string;
+  loginTime: number;
+  mfaRequired: boolean;
 }

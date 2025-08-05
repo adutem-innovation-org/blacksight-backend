@@ -1,6 +1,7 @@
 import { config } from "@/config";
 import { Request } from "express";
 import jwt from "jsonwebtoken";
+import { StringValue } from "ms";
 
 export class JwtService {
   private static instance: JwtService;
@@ -19,6 +20,17 @@ export class JwtService {
 
   generateToken(authId: string, expires: number): string {
     return jwt.sign({ authId }, config.jwt.privateKey, {
+      expiresIn: expires || config.jwt.expiresIn,
+      issuer: config.jwt.issuer,
+      algorithm: "RS256",
+    });
+  }
+
+  generateTokenFromPayload(
+    payload: any,
+    expires: StringValue | number
+  ): string {
+    return jwt.sign(payload, config.jwt.privateKey, {
       expiresIn: expires || config.jwt.expiresIn,
       issuer: config.jwt.issuer,
       algorithm: "RS256",

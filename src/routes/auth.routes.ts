@@ -24,6 +24,7 @@ import {
   UpdateBusinessInfoDto,
   UpdateBusinessContactInfoDto,
   SuspendUserDto,
+  EnableSMSMFADto,
 } from "@/decorators";
 import { AuthAdminController, AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -249,4 +250,19 @@ authRouter.patch(
   permissionRequirement([UserTypes.USER]),
   validateDTO(UpdateBusinessContactInfoDto),
   authController.updateBusinessContactInfo
+);
+
+authRouter.post(
+  "/mfa/enable/email",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  authController.enableEmailMFA
+);
+
+authRouter.post(
+  "/mfa/enable/sms",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(EnableSMSMFADto),
+  authController.enableSMSMFA
 );

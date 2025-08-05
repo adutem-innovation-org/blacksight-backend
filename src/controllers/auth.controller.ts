@@ -3,6 +3,7 @@ import {
   CheckUserDto,
   CreateAccountDto,
   CreateAuthDto,
+  EnableSMSMFADto,
   GoogleLoginDto,
   LoginDto,
   NotificationDto,
@@ -235,6 +236,19 @@ export class AuthController {
     const data = await this.authService.updateBusinessInfo(
       req.authData!,
       req.body
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  enableEmailMFA = async (req: Request, res: Response) => {
+    const data = await this.authService.enableEmailMFA(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
+  enableSMSMFA = async (req: GenericReq<EnableSMSMFADto>, res: Response) => {
+    const data = await this.authService.enableSMSMFA(
+      req.authData!,
+      req.body.phoneNumber
     );
     return sendSuccessResponse(res, data);
   };

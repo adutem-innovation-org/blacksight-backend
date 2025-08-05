@@ -1,6 +1,6 @@
 import { config } from "@/config";
-import { Events, SocialOptionEnum, TTL, UserTypes } from "@/enums";
-import { AuthData } from "@/interfaces";
+import { Events, MFAMethods, SocialOptionEnum, TTL, UserTypes } from "@/enums";
+import { AuthData, IpData, TempAuthData, UserAgent } from "@/interfaces";
 import {
   Admin,
   Business,
@@ -41,6 +41,7 @@ import {
   OnboardBusinessDto,
   UpdateBusinessInfoDto,
   UpdateBusinessContactInfoDto,
+  VerifyMFACodeDto,
 } from "@/decorators";
 import {
   logJsonError,
@@ -48,6 +49,7 @@ import {
   throwConflictError,
   throwForbiddenError,
   throwNotFoundError,
+  throwServerError,
   throwUnauthorizedError,
   throwUnprocessableEntityError,
 } from "@/helpers";
@@ -57,6 +59,9 @@ import { ActivityEvents } from "@/events";
 import { Logger } from "winston";
 import { logger } from "@/logging";
 import { WalletService } from "../wallet";
+import { MFAService } from "./mfa.service";
+import { v4 as uuidv4 } from "uuid";
+import ms, { StringValue } from "ms";
 
 export class AuthService {
   private static instance: AuthService;
@@ -176,11 +181,15 @@ export class AuthService {
   async setSession(
     user: IUser,
     userType: UserTypes,
-    expire: number | null
+    expire: number | null,
+    mfaVerified = false
   ): Promise<{ user: AuthData; token: string }> {
     const authId = `auth-id-${v4()}`;
     await this.expireSession(user.id);
     const ex = expire || config.jwt.ttl;
+
+    const mfaEnabled = await MFAService.isMFAEnabled(user._id.toString());
+
     const {
       _id: userId,
       businessId,
@@ -189,6 +198,7 @@ export class AuthService {
       lastName,
       isSuperAdmin,
     } = user;
+
     await this.cacheService.set(
       authId,
       {
@@ -202,6 +212,11 @@ export class AuthService {
         exp: Date.now() / 1000 + ex,
         access: [],
         authId,
+
+        // add new mfa flags
+        mfaEnabled,
+        mfaVerified: mfaEnabled ? mfaVerified : undefined,
+        partialAuth: mfaEnabled && !mfaVerified,
       },
       ex
     );
@@ -316,43 +331,51 @@ export class AuthService {
     const email = body.email.toLowerCase();
     let user = await this.userModel.findOne({ email }).exec();
 
+    // Validate the user email
     if (!user)
       return throwUnauthorizedError(`Invalid account, please try again`);
 
+    // Validate the password
     const isValidPassword = await user.validatePassword(body.password);
 
     if (!isValidPassword)
       return throwUnauthorizedError("Invalid email or password");
 
-    user.lastLogin = new Date();
+    // Check if user has MFA enabled
+    const mfaEnabled = await MFAService.isMFAEnabled(user._id.toString());
 
-    if (!user?.businessId) {
-      user.businessId = randomUUID();
+    if (mfaEnabled) {
+      // Create temporary auth data
+      const tempAuthId = uuidv4();
+      const tempAuthData: TempAuthData = {
+        userId: user._id.toString(),
+        email: user.email,
+        loginTime: Date.now(),
+        mfaRequired: true,
+      };
+
+      // Store in redis with 15-minutes expiration
+      await this.cacheService.set(tempAuthId, tempAuthData, TTL.IN_15_MINUTES);
+
+      // Generate temporary token
+      const tempToken = this.jwtService.generateTokenFromPayload(
+        { tempAuthId },
+        ms(TTL.IN_15_MINUTES * 1000) as StringValue
+      );
+
+      // Get available MFA methods
+      const availableMethods = await MFAService.getAvailableMethods(
+        user._id.toString()
+      );
+
+      return {
+        requiresMFA: true,
+        tempToken,
+        mfaMethods: availableMethods,
+      };
     }
 
-    try {
-      if (!user.walletId) {
-        const resp = await this.walletService.getOrCreateWallet(
-          user._id.toString()
-        );
-        user.walletId = resp._id;
-      }
-    } catch (error) {}
-
-    await user.save();
-
-    const session = await this.setSession(user, UserTypes.USER, null);
-
-    if (!user.isEmailVerified) {
-      this.sendVerificationOTP(session.user);
-    }
-
-    this.eventEmitter.emit(ActivityEvents.USER_LOGIN, {
-      firstName: user.firstName,
-      lastName: user.lastName,
-    });
-
-    return session;
+    return await this.generateFullAuthToken(user);
   }
 
   async register(body: CreateAccountDto) {
@@ -919,5 +942,89 @@ export class AuthService {
     this.eventEmitter.emit(Events.SEND_NOTIFICATION, {
       ...body,
     });
+  }
+
+  /**
+   * MFA SERVICE
+   */
+
+  // Enable email MFA
+  async enableEmailMFA(authData: AuthData) {
+    const userId = authData.userId.toString();
+
+    const { success } = await MFAService.enableMFAMethod(
+      userId,
+      MFAMethods.EMAIL
+    );
+
+    if (!success) {
+      return throwServerError("Failed to enable email MFA");
+    }
+
+    return {
+      message: "Email MFA enabled successfully",
+    };
+  }
+
+  // Enable SMS MFA
+  async enableSMSMFA(authData: AuthData, phoneNumber: string) {
+    const userId = authData.userId.toString();
+
+    const { success } = await MFAService.enableMFAMethod(
+      userId,
+      MFAMethods.SMS,
+      phoneNumber
+    );
+
+    if (!success) {
+      return throwServerError("Failed to enable SMS MFA");
+    }
+
+    return {
+      message: "SMS MFA enabled successfully",
+    };
+  }
+
+  // Generate full auth tokens
+  private async generateFullAuthToken(data: any, mfaVerified = false) {
+    // Differentiat between mfa enabled user and normal one
+    const user = mfaVerified
+      ? (await this.userModel.findOne({ email: data.email }))!
+      : (data as IUser);
+
+    user.lastLogin = new Date();
+
+    // Create a new busines id for user if the don't have one
+    if (!user?.businessId) {
+      user.businessId = randomUUID();
+    }
+
+    // Create a new wallet for user if they don't have one
+    try {
+      if (!user.walletId) {
+        const resp = await this.walletService.getOrCreateWallet(
+          user._id.toString()
+        );
+        user.walletId = resp._id;
+      }
+    } catch (error) {}
+
+    await user.save();
+
+    // Setup user's session
+    const session = await this.setSession(user, user.userType, null);
+
+    // Send verification email automatically if their email is not verified
+    if (!user.isEmailVerified) {
+      this.sendVerificationOTP(session.user);
+    }
+
+    // Log user's login activity
+    this.eventEmitter.emit(ActivityEvents.USER_LOGIN, {
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+
+    return session;
   }
 }
