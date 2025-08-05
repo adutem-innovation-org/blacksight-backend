@@ -10,3 +10,4 @@ export * from "./cache.middleware";
 export * from "./file-validator";
 export * from "./mcp.middleware";
 export * from "./api-key.middleware";
+export * from "./request-info.middleware";
