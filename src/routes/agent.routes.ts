@@ -8,9 +8,18 @@ import {
   validateDTO,
   verifyApiKey,
 } from "@/middlewares";
+import cors from "cors";
 
 export const agentRouter = createRouter();
 const agentController = AgentController.getInstance();
+
+// Add permissive CORS for all agent routes
+agentRouter.use(
+  cors({
+    origin: true, // Allow all origins
+    credentials: true,
+  })
+);
 
 agentRouter.use(verifyApiKey, extractSessionId);
 
