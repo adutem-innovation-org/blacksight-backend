@@ -10,16 +10,20 @@ export const getRequestInfo = async (
   res: Response,
   next: NextFunction
 ) => {
-  // Step 1: Get ip address
-  console.log(req.headers["x-forwarded-for"]);
-  console.log(req.headers["x-real-ip"]);
-  console.log(req.socket.remoteAddress);
-
-  const ip =
-    (req.headers["x-forwarded-for"] === "string"
+  const forwardedIp = (
+    typeof req.headers["x-forwarded-for"] === "string"
       ? req.headers["x-forwarded-for"]?.split(",")[0]
       : req.headers["x-forwarded-for"]?.[0]?.split(",")[0]
-    )?.trim() || req.socket.remoteAddress;
+  )?.trim();
+
+  // Courtesy of nginx
+  const realIp =
+    typeof req.headers["x-real-ip"] === "string"
+      ? req.headers["x-real-ip"]?.split(",")[0]
+      : req.headers["x-real-ip"]?.[0]?.split(",")[0];
+
+  // Step 1: Get ip address
+  const ip = forwardedIp || realIp || req.socket.remoteAddress || "";
 
   // Step 2: Parse user agent
   const agent = useragent.parse(req.headers["user-agent"]);
@@ -27,8 +31,9 @@ export const getRequestInfo = async (
   // Step 3: Lookup geolocation
   let location: IpData | undefined;
   try {
+    if (!ip) return (location = { ip });
     const { data } = (await axios.get(
-      `https://ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
+      `https://api.ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
     )) as {
       data: {
         ip: string;
@@ -40,7 +45,7 @@ export const getRequestInfo = async (
       };
     };
     location = {
-      ip: data.ip || ip || "",
+      ip: data.ip || ip,
       city: data.city,
       region: data.region_name,
       country: data.country_name,
@@ -49,6 +54,9 @@ export const getRequestInfo = async (
     };
   } catch (error) {
     logger.error("Unable to lookup location");
+    location = {
+      ip,
+    };
   }
 
   req.ipData = location;
