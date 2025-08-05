@@ -1,4 +1,5 @@
 import { config } from "@/config";
+import { logJsonError } from "@/helpers";
 import { IpData } from "@/interfaces";
 import { logger } from "@/logging";
 import axios from "axios";
@@ -32,6 +33,8 @@ export const getRequestInfo = async (
   let location: IpData | undefined;
   try {
     if (!ip) return (location = { ip });
+    console.log("Api key", config.ipapi.apiKey);
+    console.log("Ip", ip);
     const { data } = (await axios.get(
       `https://api.ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
     )) as {
@@ -54,10 +57,13 @@ export const getRequestInfo = async (
     };
   } catch (error) {
     logger.error("Unable to lookup location");
+    logJsonError(error);
     location = {
       ip,
     };
   }
+
+  console.log("Location", location);
 
   req.ipData = location;
   req.userAgent = {
