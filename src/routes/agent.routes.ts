@@ -13,11 +13,36 @@ import cors from "cors";
 export const agentRouter = createRouter();
 const agentController = AgentController.getInstance();
 
-// Add permissive CORS for all agent routes
+// Handle preflight requests first
+agentRouter.options(
+  "*",
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-api-key",
+      "x-agent-id",
+      "x-session-id",
+    ],
+  })
+);
+
+// Apply CORS to all routes
 agentRouter.use(
   cors({
-    origin: true, // Allow all origins
+    origin: true,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-api-key",
+      "x-agent-id",
+      "x-session-id",
+    ],
   })
 );
 
