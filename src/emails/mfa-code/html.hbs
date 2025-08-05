@@ -1,0 +1,183 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verification Code - Blacksight</title>
+  </head>
+  <body
+    style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9;"
+  >
+
+    <!-- Email Container -->
+    <div style="max-width: 640px; margin: 0 auto; background-color: #f9f9f9;">
+
+      <!-- Header -->
+      <div style="text-align: center; padding: 40px 0;">
+        <a href="https://blacksight.co">
+          <img
+            src="https://firebasestorage.googleapis.com/v0/b/philipthedeveloper-p.appspot.com/o/blacksight%2Fblacksight_logo_side.png?alt=media&token=fad01d82-762b-4d89-88f6-b7d3c2e1d912"
+            alt="Blacksight Logo"
+            style="height: 38px; width: 138px;"
+          />
+        </a>
+      </div>
+
+      <!-- Main Content -->
+      <div
+        style="background-color: #ffffff; border-radius: 4px; margin: 0 20px; padding: 40px 50px;"
+      >
+
+        <h2
+          style="color: #4f545c; font-size: 20px; font-weight: 500; margin: 0 0 20px 0; letter-spacing: 0.27px;"
+        >
+          Hi
+          {{firstName}},
+        </h2>
+
+        <p
+          style="color: #737f8d; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;"
+        >
+          You're attempting to sign in to your Blacksight account. To complete
+          the login process, please use the verification code below:
+        </p>
+
+        <!-- Verification Code Box -->
+        <div style="text-align: center; margin: 30px 0;">
+          <div
+            style="background-color: #f8f9fa; border: 2px dashed #5865f2; border-radius: 8px; padding: 20px; display: inline-block;"
+          >
+            <p
+              style="color: #4f545c; font-size: 14px; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;"
+            >
+              Your Verification Code
+            </p>
+            <div
+              style="background-color: #5865f2; color: #ffffff; font-size: 28px; font-weight: 700; font-family: 'Courier New', monospace; padding: 15px 25px; border-radius: 6px; letter-spacing: 3px; margin: 0;"
+            >
+              {{verificationCode}}
+            </div>
+          </div>
+        </div>
+
+        <p
+          style="color: #737f8d; font-size: 16px; line-height: 24px; margin: 20px 0;"
+        >
+          Enter this code in the verification field to complete your login. This
+          code is only valid for the next
+          <strong>10 minutes</strong>
+          and can only be used once.
+        </p>
+
+        <!-- Security Info Box -->
+        <div
+          style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 20px; margin: 25px 0;"
+        >
+          <div style="display: flex; align-items: flex-start;">
+            <div
+              style="color: #856404; font-size: 18px; margin-right: 10px; margin-top: 2px;"
+            >🔒</div>
+            <div>
+              <h3
+                style="color: #856404; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;"
+              >
+                Security Notice
+              </h3>
+              <p
+                style="color: #856404; font-size: 14px; line-height: 20px; margin: 0;"
+              >
+                If you didn't attempt to sign in, please ignore this email and
+                consider changing your password. Never share this verification
+                code with anyone.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Login Details -->
+        <div
+          style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin: 20px 0;"
+        >
+          <h3
+            style="color: #4f545c; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;"
+          >
+            Login Attempt Details:
+          </h3>
+          <p
+            style="color: #737f8d; font-size: 13px; line-height: 18px; margin: 3px 0;"
+          >
+            <strong>Time:</strong>
+            {{timestamp}}
+          </p>
+          <p
+            style="color: #737f8d; font-size: 13px; line-height: 18px; margin: 3px 0;"
+          >
+            <strong>IP Address:</strong>
+            {{ipAddress}}
+          </p>
+          <p
+            style="color: #737f8d; font-size: 13px; line-height: 18px; margin: 3px 0;"
+          >
+            <strong>Location:</strong>
+            {{location}}
+          </p>
+          <p
+            style="color: #737f8d; font-size: 13px; line-height: 18px; margin: 3px 0;"
+          >
+            <strong>Device:</strong>
+            {{device}}
+          </p>
+        </div>
+
+        <!-- Divider -->
+        <hr
+          style="border: none; border-top: 1px solid #dcddde; margin: 30px 0;"
+        />
+
+        <!-- Footer -->
+        <div style="color: #747f8d; font-size: 13px; line-height: 16px;">
+          <p style="margin: 0;">
+            Having trouble signing in?
+            <a
+              href="https://blacksight.co/contact"
+              style="color: #5865f2; text-decoration: none;"
+            >Contact our support team</a>
+            or visit our
+            <a
+              href="https://blacksight.co/help"
+              style="color: #5865f2; text-decoration: none;"
+            >help center</a>.<br />
+            You can also reach us on X
+            <a
+              href="https://blacksight.co/"
+              style="color: #5865f2; text-decoration: none;"
+            >@blacksight</a>.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Bottom Footer -->
+      <div
+        style="text-align: center; padding: 20px; color: #99aab5; font-size: 12px; line-height: 24px;"
+      >
+        <p style="margin: 0 0 5px 0;">
+          Sent by BlackSight •
+          <a
+            href="https://blacksight.co/contact"
+            style="color: #1eb0f4; text-decoration: none;"
+          >Learn about us</a>
+          •
+          <a
+            href="https://blacksight.co/contact"
+            style="color: #1eb0f4; text-decoration: none;"
+          >@blacksight</a>
+        </p>
+        <p style="margin: 0;">
+          444 De Haro Street, Suite 200, San Francisco, CA 94107
+        </p>
+      </div>
+
+    </div>
+
+  </body>
+</html>
