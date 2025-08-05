@@ -54,13 +54,18 @@ app.use(
 app.use((req, res, next) => {
   // Check if it's an agent route
   if (req.path.startsWith("/api/v1/agent")) {
-    console.log("Got here");
     // Apply permissive CORS for agent routes
     cors({
       origin: true,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-api-key",
+        "x-agent-id",
+        "x-session-id",
+      ],
     })(req, res, next);
   } else {
     // Apply restrictive CORS for other routes
