@@ -227,7 +227,12 @@ export class AuthService {
     const { hash, salt, deviceId, pushToken, ...rest } = u;
 
     return {
-      user: rest,
+      user: {
+        ...rest,
+        mfaEnabled,
+        mfaVerified: mfaEnabled ? mfaVerified : undefined,
+        partialAuth: mfaEnabled && !mfaVerified,
+      },
       token: this.jwtService.generateToken(authId, ex),
     };
   }
@@ -351,6 +356,7 @@ export class AuthService {
         userId: user._id.toString(),
         email: user.email,
         loginTime: Date.now(),
+        expiresAt: Date.now() + TTL.IN_15_MINUTES * 1000,
         mfaRequired: true,
       };
 
@@ -364,14 +370,15 @@ export class AuthService {
       );
 
       // Get available MFA methods
-      const availableMethods = await MFAService.getAvailableMethods(
+      const { methods } = await MFAService.getAvailableMethods(
         user._id.toString()
       );
 
       return {
         requiresMFA: true,
         tempToken,
-        mfaMethods: availableMethods,
+        mfaMethods: methods,
+        expiresAt: tempAuthData.expiresAt,
       };
     }
 
@@ -912,7 +919,6 @@ export class AuthService {
     }
 
     user.isEmailVerified = true;
-    user.lastLogin = new Date();
 
     if (!user.imageUrl) {
       user.imageUrl = loginDto.photoUrl;
@@ -920,7 +926,43 @@ export class AuthService {
 
     await user.save();
 
-    return await this.setSession(user, UserTypes.USER, 2.592e6);
+    // Check if user has MFA enabled
+    const mfaEnabled = await MFAService.isMFAEnabled(user._id.toString());
+
+    if (mfaEnabled) {
+      // Create temporary auth data
+      const tempAuthId = uuidv4();
+      const tempAuthData: TempAuthData = {
+        userId: user._id.toString(),
+        email: user.email,
+        loginTime: Date.now(),
+        expiresAt: Date.now() + TTL.IN_15_MINUTES * 1000,
+        mfaRequired: true,
+      };
+
+      // Store in redis with 15-minutes expiration
+      await this.cacheService.set(tempAuthId, tempAuthData, TTL.IN_15_MINUTES);
+
+      // Generate temporary token
+      const tempToken = this.jwtService.generateTokenFromPayload(
+        { tempAuthId },
+        ms(TTL.IN_15_MINUTES * 1000) as StringValue
+      );
+
+      // Get available MFA methods
+      const { methods } = await MFAService.getAvailableMethods(
+        user._id.toString()
+      );
+
+      return {
+        requiresMFA: true,
+        tempToken,
+        mfaMethods: methods,
+        expiresAt: tempAuthData.expiresAt,
+      };
+    }
+
+    return await this.generateFullAuthToken(user);
   }
 
   async googleLogin(loginDto: GoogleLoginDto) {
@@ -947,6 +989,91 @@ export class AuthService {
   /**
    * MFA SERVICE
    */
+
+  // Send MFA verification code
+  async sendMFACode(
+    tempAuthData: TempAuthData,
+    method: MFAMethods,
+    ipData: IpData,
+    userAgent: UserAgent
+  ) {
+    if (!Object.values(MFAMethods).includes(method))
+      throwUnprocessableEntityError("Invalid method. Valid methods");
+
+    const sent = await MFAService.sendVerificationCode(
+      tempAuthData.userId,
+      method,
+      ipData,
+      userAgent
+    );
+
+    if (!sent) {
+      return throwServerError("Failed to send verification code");
+    }
+
+    return {
+      message: `Verification code sent via ${method}`,
+      method,
+    };
+  }
+
+  // Verify MFA code
+  async verifyMFA(
+    tempAuthData: TempAuthData,
+    body: VerifyMFACodeDto,
+    tempToken: string
+  ) {
+    const { code, method } = body;
+
+    let verified = false;
+
+    if (method === MFAMethods.EMAIL || method === MFAMethods.SMS) {
+      verified = await MFAService.verifyCode(tempAuthData.userId, code, method);
+    } else if (method === MFAMethods.BACKUP_CODE) {
+      verified = await MFAService.verifyBackupCode(tempAuthData.userId, code);
+    }
+
+    if (!verified) {
+      return throwUnauthorizedError("Invalid code");
+    }
+
+    // Clean up temporary auth data
+    const payload = this.jwtService.verifyToken(tempToken!) as {
+      tempAuthId: string;
+    };
+    await this.cacheService.delete(payload.tempAuthId);
+
+    // Generate full access token
+    const user = { id: tempAuthData.userId, email: tempAuthData.email };
+    return this.generateFullAuthToken(user, true);
+  }
+
+  // Setup MFA (generate backup codes)
+  // async setupMFA(authData: AuthData) {
+  //   const mfaSetup = await MFAService.generateMFASetup(
+  //     authData.userId.toString()
+  //   );
+
+  //   return {
+  //     backupCodes: mfaSetup.backupCodes,
+  //     message:
+  //       "Multifactor authentication setup successful. Enable email or SMS to complete setup.",
+  //   };
+  // }
+
+  // Get MFA Status
+  async getMFAStatus(authData: AuthData) {
+    const userId = authData.userId.toString();
+
+    const { mfaEnabled, methods } = await MFAService.getAvailableMethods(
+      userId
+    );
+
+    return {
+      availableMethods: methods,
+      mfaEnabled,
+    };
+  }
 
   // Enable email MFA
   async enableEmailMFA(authData: AuthData) {
@@ -985,6 +1112,34 @@ export class AuthService {
     };
   }
 
+  // Disable MFA method
+  async disableMFAMethod(authData: AuthData, method: MFAMethods) {
+    const userId = authData.userId.toString();
+
+    const success = await MFAService.disableMFAMethod(userId, method);
+
+    if (!success) {
+      return throwServerError("Failed to disable MFA method");
+    }
+
+    return {
+      message: "SMS MFA enabled successfully",
+      method,
+    };
+  }
+
+  // Check temporary authentication status
+  async checkTempAuthStatus(tempAuthData: TempAuthData) {
+    return {
+      valid: true,
+      expiresAt: tempAuthData.expiresAt,
+      timeRemaining: Math.max(0, tempAuthData.expiresAt - Date.now()),
+      availableMethods: await MFAService.getAvailableMethods(
+        tempAuthData.userId
+      ),
+    };
+  }
+
   // Generate full auth tokens
   private async generateFullAuthToken(data: any, mfaVerified = false) {
     // Differentiat between mfa enabled user and normal one
@@ -1012,7 +1167,12 @@ export class AuthService {
     await user.save();
 
     // Setup user's session
-    const session = await this.setSession(user, user.userType, null);
+    const session = await this.setSession(
+      user,
+      user.userType,
+      null,
+      mfaVerified
+    );
 
     // Send verification email automatically if their email is not verified
     if (!user.isEmailVerified) {

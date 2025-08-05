@@ -16,14 +16,18 @@ import {
   UpdateBusinessInfoDto,
   UpdateProfileDto,
   VerifyEmailDto,
+  VerifyMFACodeDto,
+  SendMFACodeDto,
+  DisableMFAMethodDto,
 } from "@/decorators";
 import { UserTypes } from "@/enums";
 import {
   sendSuccessResponse,
   throwBadRequestError,
   throwForbiddenError,
+  throwUnauthorizedError,
 } from "@/helpers";
-import { AuthService } from "@/services";
+import { AuthService, JwtService } from "@/services";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
@@ -31,10 +35,12 @@ interface GenericReq<T> extends Request<any, any, T> {}
 
 export class AuthController {
   private readonly authService: AuthService;
+  private readonly jwtService: JwtService;
   private static instance: AuthController;
 
   constructor() {
     this.authService = AuthService.getInstance();
+    this.jwtService = JwtService.getInstance();
   }
 
   static getInstance(): AuthController {
@@ -240,6 +246,11 @@ export class AuthController {
     return sendSuccessResponse(res, data);
   };
 
+  getMFAStatus = async (req: Request, res: Response) => {
+    const data = await this.authService.getMFAStatus(req.authData!);
+    return sendSuccessResponse(res, data);
+  };
+
   enableEmailMFA = async (req: Request, res: Response) => {
     const data = await this.authService.enableEmailMFA(req.authData!);
     return sendSuccessResponse(res, data);
@@ -250,6 +261,43 @@ export class AuthController {
       req.authData!,
       req.body.phoneNumber
     );
+    return sendSuccessResponse(res, data);
+  };
+
+  disableMFAMethod = async (
+    req: GenericReq<DisableMFAMethodDto>,
+    res: Response
+  ) => {
+    const data = await this.authService.disableMFAMethod(
+      req.authData!,
+      req.body.method
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  sendMFACode = async (req: GenericReq<SendMFACodeDto>, res: Response) => {
+    const data = await this.authService.sendMFACode(
+      req.tempAuthData!,
+      req.body.method,
+      req.ipData!,
+      req.userAgent!
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  verifyMFACode = async (req: GenericReq<VerifyMFACodeDto>, res: Response) => {
+    const tempToken = this.jwtService.extractTokenFromHeader(req);
+    if (!tempToken) return throwUnauthorizedError("Unauthorized");
+    const data = await this.authService.verifyMFA(
+      req.tempAuthData!,
+      req.body,
+      tempToken
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  checkTempAuthStatus = async (req: Request, res: Response) => {
+    const data = await this.authService.checkTempAuthStatus(req.tempAuthData!);
     return sendSuccessResponse(res, data);
   };
 }

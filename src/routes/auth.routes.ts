@@ -1,8 +1,10 @@
 import { createRouter } from "@/helpers";
 import {
+  getRequestInfo,
   permissionRequirement,
   uploadSingleFile,
   validateDTO,
+  validatePartialToken,
   validateToken,
 } from "@/middlewares";
 import {
@@ -25,6 +27,7 @@ import {
   UpdateBusinessContactInfoDto,
   SuspendUserDto,
   EnableSMSMFADto,
+  DisableMFAMethodDto,
 } from "@/decorators";
 import { AuthAdminController, AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -265,4 +268,34 @@ authRouter.post(
   permissionRequirement([UserTypes.USER]),
   validateDTO(EnableSMSMFADto),
   authController.enableSMSMFA
+);
+
+authRouter.post(
+  "/mfa/disable-method",
+  validateToken,
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(DisableMFAMethodDto),
+  authController.disableMFAMethod
+);
+
+authRouter.get("/mfa/status", validateToken, authController.getMFAStatus);
+
+authRouter.post(
+  "/mfa/send-code",
+  validatePartialToken,
+  getRequestInfo,
+  authController.sendMFACode
+);
+
+authRouter.post(
+  "/mfa/verify-code",
+  validatePartialToken,
+  getRequestInfo,
+  authController.verifyMFACode
+);
+
+authRouter.get(
+  "/mfa/check-temp-auth",
+  validatePartialToken,
+  authController.checkTempAuthStatus
 );
