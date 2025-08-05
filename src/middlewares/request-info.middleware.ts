@@ -36,8 +36,6 @@ export const getRequestInfo = async (
       location = { ip };
       return;
     }
-    console.log("Api key", config.ipapi.apiKey);
-    console.log("Ip", ip);
     const { data } = (await axios.get(
       `https://api.ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
     )) as {
@@ -47,7 +45,7 @@ export const getRequestInfo = async (
         region_name: string;
         country_name: string;
         latitude: number;
-        longtitude: number;
+        longitude: number;
       };
     };
     location = {
@@ -56,7 +54,7 @@ export const getRequestInfo = async (
       region: data.region_name,
       country: data.country_name,
       lat: data.latitude,
-      long: data.longtitude,
+      long: data.longitude,
     };
   } catch (error) {
     logger.error("Unable to lookup location");
@@ -65,8 +63,6 @@ export const getRequestInfo = async (
       ip,
     };
   }
-
-  console.log("Location", location);
 
   req.ipData = location;
   req.userAgent = {
