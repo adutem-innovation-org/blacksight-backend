@@ -32,7 +32,10 @@ export const getRequestInfo = async (
   // Step 3: Lookup geolocation
   let location: IpData | undefined;
   try {
-    if (!ip) return (location = { ip });
+    if (!ip) {
+      location = { ip };
+      return;
+    }
     console.log("Api key", config.ipapi.apiKey);
     console.log("Ip", ip);
     const { data } = (await axios.get(
