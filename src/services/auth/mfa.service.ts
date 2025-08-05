@@ -88,7 +88,9 @@ export class MFAService {
               verificationCode: code,
               timestamp: new Date().toUTCString(),
               ipAddress: ipData?.ip,
-              location: `${ipData?.city}, ${ipData?.region}, ${ipData?.country}`,
+              location: ipData?.city
+                ? `${ipData?.city}, ${ipData?.region}, ${ipData?.country}`
+                : "Unknown",
               device: `${userAgent?.os} ${userAgent?.browser} on ${userAgent?.platform}`,
             },
           });
