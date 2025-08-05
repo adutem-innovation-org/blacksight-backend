@@ -9,9 +9,36 @@ import {
   verifyApiKey,
 } from "@/middlewares";
 import cors from "cors";
+import { NextFunction, Request, Response } from "express";
 
 export const agentRouter = createRouter();
 const agentController = AgentController.getInstance();
+
+// Add this before your other middleware in agentRouter
+agentRouter.use((req: any, res: any, next: any) => {
+  console.log("Got here");
+  // Set CORS headers manually
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    res.header("Access-Control-Allow-Origin", "*");
+  }
+
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-API-Key"
+  );
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
+  next();
+});
 
 // Handle preflight requests first
 agentRouter.options(
