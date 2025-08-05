@@ -15,3 +15,5 @@ export * from "./update-profile-image.dto";
 export * from "./onboard.dto";
 export * from "./update-business-info.dto";
 export * from "./admin";
+export * from "./verify-mfa-code.dto";
+export * from "./enable-sms-mfa.dto";
