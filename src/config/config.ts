@@ -62,9 +62,9 @@ export const config = {
     apiKey: process.env.IPAPI_API_KEY ?? "",
   },
   twilio: {
-    accountSid: process.env.TWILIO_ACCOUNT_SID,
-    authToken: process.env.TWILIO_AUTH_TOKEN,
-    virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER,
+    accountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
+    authToken: process.env.TWILIO_AUTH_TOKEN ?? "",
+    virtualNumber: process.env.TWILIO_VIRTUAL_NUMBER ?? "",
   },
   firebase: {
     scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
