@@ -50,7 +50,6 @@ app.use(
   })
 );
 
-// In your main app setup
 app.use((req, res, next) => {
   // Check if it's an agent route
   if (req.path.startsWith("/api/v1/agent")) {
@@ -81,19 +80,6 @@ app.use((req, res, next) => {
     })(req, res, next);
   }
 });
-
-// app.use(
-//   cors({
-//     origin: [
-//       "http://localhost:5173",
-//       "http://localhost:5174",
-//       "http://192.168.137.1:5173",
-//       "http://localhost:5000",
-//       ...config.corsOrigins,
-//     ],
-//     credentials: true,
-//   })
-// );
 
 // Moderate compression setup
 app.use(
