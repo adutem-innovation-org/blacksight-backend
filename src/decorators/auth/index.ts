@@ -17,3 +17,5 @@ export * from "./update-business-info.dto";
 export * from "./admin";
 export * from "./verify-mfa-code.dto";
 export * from "./enable-sms-mfa.dto";
+export * from "./send-mfa.code.dto";
+export * from "./disable-mfa-method.dto";
