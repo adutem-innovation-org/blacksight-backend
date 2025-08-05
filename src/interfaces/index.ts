@@ -11,3 +11,18 @@ export type MiddleWare = (
   res: Response,
   next: NextFunction
 ) => any;
+
+export type IpData = {
+  ip: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  lat?: number;
+  long?: number;
+};
+
+export type UserAgent = {
+  browser: string;
+  os: string;
+  platform: string;
+};
