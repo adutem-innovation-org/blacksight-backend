@@ -24,5 +24,6 @@ export interface TempAuthData {
   userId: string;
   email: string;
   loginTime: number;
+  expiresAt: number;
   mfaRequired: boolean;
 }
