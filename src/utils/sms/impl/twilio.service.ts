@@ -47,8 +47,12 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
         };
       }
 
+      console.log("Starting to render body...", options);
+
       // Render message body
       const body = await this.render(options);
+
+      console.log("Body rendered....", body);
 
       if (!body) {
         return { success: false, error: "Message body cannot be empty" };
@@ -62,12 +66,16 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
         };
       }
 
+      console.log("Preparing message options....");
+
       // Prepare message options
       const messageOptions: any = {
         body: this.sanitizeInput(body),
         from: options.from || this.sender,
         to: options.to,
       };
+
+      console.log("Message options prepared....", messageOptions);
 
       // Add optional parameters
       if (options.statusCallback)
@@ -76,8 +84,12 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
       if (options.validityPeriod)
         messageOptions.validityPeriod = options.validityPeriod;
 
+      console.log("Final message options....", messageOptions);
+
       // Send with retry logic
       const message = await this.sendWithRetry(messageOptions);
+
+      console.log("Message sent successfully...", message);
 
       return {
         success: true,
