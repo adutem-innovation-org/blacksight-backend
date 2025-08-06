@@ -77,7 +77,7 @@ export class MFAService {
         case MFAMethods.EMAIL:
           // TODO: Send email
           const { email, firstName } = await this.getUserData(userId);
-          await this.emailService.send({
+          const result = await this.emailService.send({
             template: "mfa-code",
             message: {
               to: email,
@@ -94,14 +94,19 @@ export class MFAService {
               device: `${userAgent?.os} ${userAgent?.browser} on ${userAgent?.platform}`,
             },
           });
+
+          if (result.error) return false;
+
           break;
         case MFAMethods.SMS:
           // TODO: Send SMS
           if (mfaSetup.phoneNumber) {
-            await this.smsService.send({
+            const result = await this.smsService.send({
               body: `Your verification code is: ${code}. This code will expire in 10 minutes.`,
-              to: mfaSetup.phoneNumber,
+              to: mfaSetup.phoneNumber.replace(/\s/g, ""),
             });
+
+            if (!result.success) return false;
           }
           break;
         default:
