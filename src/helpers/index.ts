@@ -11,8 +11,9 @@ export * from "./crypto.helpers";
 export * from "./pagination.helpers";
 export * from "./cleanup.helpers";
 
-export function toBoolean(value: string) {
-  return value === "true";
+export function toBoolean(value: string | boolean | undefined): boolean {
+  if (value === undefined) return false;
+  return typeof value === "string" ? value === "true" : value;
 }
 
 /** Check if the current entity is a user  */
