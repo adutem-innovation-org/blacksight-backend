@@ -7,3 +7,4 @@ export * from "./appointment";
 export * from "./settings";
 export * from "./templates";
 export * from "./agent";
+export * from "./product-recommendation";
