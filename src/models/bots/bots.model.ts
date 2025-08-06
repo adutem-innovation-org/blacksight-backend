@@ -2,12 +2,15 @@ import { defaultInstruction, newDefaultInstruction } from "@/constants";
 import { BotStatus } from "@/enums";
 import { Types, Model, model, Schema, Document } from "mongoose";
 import { IKnowledgeBase } from "../knowledge-base";
+import { IProductSource } from "../product-recommendation";
 const collectionName = "bots";
 
 export interface IBot extends Document<Types.ObjectId> {
   businessId: Types.ObjectId;
   knowledgeBaseIds: Types.ObjectId[];
   knowledgeBases?: IKnowledgeBase[];
+  productsSourceIds?: Types.ObjectId[];
+  productsSources?: IProductSource[];
   name: string;
   instructions: string;
   welcomeMessage: string;
@@ -28,6 +31,11 @@ const BotSchema: Schema<IBot> = new Schema<IBot>(
       type: [Schema.Types.ObjectId],
       required: [true, "Please provide knowledge base"],
       ref: "knowledge-bases",
+    },
+    productsSourceIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "product-sources",
+      default: undefined,
     },
     name: {
       type: String,
@@ -86,6 +94,16 @@ BotSchema.virtual("knowledgeBases", {
   justOne: false,
   options: {
     select: "tag isActive documentId",
+  },
+});
+
+BotSchema.virtual("productsSources", {
+  ref: "product-sources",
+  localField: "productsSourcesIds",
+  foreignField: "_id",
+  justOne: false,
+  options: {
+    select: "source tag documentId",
   },
 });
 
