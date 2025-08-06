@@ -255,7 +255,7 @@ export class KnowledgeBaseService {
     const { content: rawHtml, ...rest } =
       (await this.scrapingService.scrapePage(url))!;
 
-    content = cleanContent(rawHtml, {
+    content = this.cleanContent(rawHtml, {
       maxLength: 50_000,
       removeUrls: true,
     });
