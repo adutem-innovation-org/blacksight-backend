@@ -1,8 +1,10 @@
 import { BotStatus } from "@/enums";
 import { isOwnerUser, isSuperAdmin, logJsonError } from "@/helpers";
 import { AuthData } from "@/interfaces";
+import { logger } from "@/logging";
 import { Bot, IBot } from "@/models";
 import { Model, Types } from "mongoose";
+import { Logger } from "winston";
 
 // This service was created to overcome the issue of looping in the call stack.
 // The method in this service were initially part of the BotService, but because knowledgebase service is imported in the bot service, we cannot import the bot service in the knowledgebase service as well, as this results in a callstack loop.
@@ -12,6 +14,7 @@ export class BotSharedService {
 
   // Helpers
   private static readonly logJsonError = logJsonError;
+  private static readonly logger: Logger = logger;
 
   // Models
   private readonly botModel: Model<IBot> = Bot;
@@ -50,6 +53,36 @@ export class BotSharedService {
 
       await Promise.allSettled(botDeactivationPromises);
     } catch (error) {
+      BotSharedService.logJsonError(error);
+    }
+  }
+
+  async disconnectProductsSource(auth: AuthData, sourceId: string) {
+    try {
+      if (!Types.ObjectId.isValid(sourceId)) {
+        throw new Error("Invalid source ID");
+      }
+
+      const allAssociatedBots = await this.botModel.find({
+        productsSourceIds: { $in: [new Types.ObjectId(sourceId)] },
+      });
+
+      if (allAssociatedBots.length === 0) return;
+
+      const disconnectionPromises = allAssociatedBots
+        .filter(
+          (bot) => isOwnerUser(auth, bot.businessId) || isSuperAdmin(auth)
+        )
+        .map(async (bot) => {
+          bot.productsSourceIds = (bot.productsSourceIds || []).filter(
+            (id) => !id.equals(sourceId)
+          );
+          await bot.save();
+        });
+
+      await Promise.allSettled(disconnectionPromises);
+    } catch (error) {
+      BotSharedService.logger.error("Unable to disconnect products source");
       BotSharedService.logJsonError(error);
     }
   }
