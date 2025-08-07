@@ -187,7 +187,7 @@ export class ProductRecommendationService {
           );
       }
 
-      const pineconeIndex = this.pinecone.Index("knowledge-base");
+      const pineconeIndex = this.pinecone.Index("product-source");
 
       // const chunks = content.match(/(.{1,500})/g);
       const chunks = content.match(/[^.!?]{1,500}[.!?]/g) || [];
