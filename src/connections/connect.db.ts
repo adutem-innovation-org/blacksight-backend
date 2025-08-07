@@ -7,7 +7,7 @@ export const establishDatabaseConnection = async (callback?: Function) => {
   try {
     logger.info("Connecting to the database...");
     if (!config.db.url) return throwServerError("Missing database url");
-    await connect(config.db.url, {});
+    await connect(config.db.url, { timeoutMS: 30000 });
     logger.info("Connected to the database");
     if (callback) callback?.();
   } catch (error: any) {
