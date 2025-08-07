@@ -20,6 +20,8 @@ export const verifyApiKey = async (
     return throwUnauthorizedError("Missing or invalid API key");
   }
 
+  console.log("Raw key", apiKey);
+
   const apiKeyService = ApiKeyService.getInstance();
   const cacheService = CacheService.getInstance();
   const hashedKey = createHash("sha256").update(apiKey).digest("hex");
