@@ -3,4 +3,5 @@ export enum KnowledgeBaseSources {
   FILE = "file",
   URL = "url",
   PROMPT = "ai-prompt",
+  API = "api",
 }

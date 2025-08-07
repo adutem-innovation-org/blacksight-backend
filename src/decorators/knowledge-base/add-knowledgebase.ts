@@ -18,7 +18,7 @@ import {
 import "reflect-metadata";
 
 @ValidatorConstraint({ name: "IsHttpOrHttpsUrl", async: false })
-class IsHttpOrHttpsUrl implements ValidatorConstraintInterface {
+export class IsHttpOrHttpsUrl implements ValidatorConstraintInterface {
   validate(url: string, validationArguments?: ValidationArguments) {
     // return url.startsWith("http://") || url.startsWith("https://");
     try {
