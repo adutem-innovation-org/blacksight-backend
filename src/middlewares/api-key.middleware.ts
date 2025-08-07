@@ -35,6 +35,8 @@ export const verifyApiKey = async (
 
   const keyRecord = await apiKeyService.getApiKey(hashedKey);
 
+  console.log("Key record", keyRecord);
+
   if (
     !keyRecord ||
     keyRecord.revoked ||
@@ -58,6 +60,8 @@ export const verifyApiKey = async (
 
   // Get user info
   const user = await User.findById(req.apiKeyOwnerId!).select(GetUserAltDto);
+
+  console.log("Api key owner >> ", user);
 
   if (!user || user.isSuspended) {
     return throwUnauthorizedError("Invalid API key");
