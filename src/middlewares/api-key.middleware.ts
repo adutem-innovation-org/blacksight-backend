@@ -20,8 +20,6 @@ export const verifyApiKey = async (
     return throwUnauthorizedError("Missing or invalid API key");
   }
 
-  console.log("Raw key", apiKey);
-
   const apiKeyService = ApiKeyService.getInstance();
   const cacheService = CacheService.getInstance();
   const hashedKey = createHash("sha256").update(apiKey).digest("hex");
@@ -35,11 +33,7 @@ export const verifyApiKey = async (
     return next();
   }
 
-  console.log("Hashed key", hashedKey);
-
   const keyRecord = await apiKeyService.getApiKey(hashedKey);
-
-  console.log("Key record", keyRecord);
 
   if (
     !keyRecord ||
@@ -64,8 +58,6 @@ export const verifyApiKey = async (
 
   // Get user info
   const user = await User.findById(req.apiKeyOwnerId!).select(GetUserAltDto);
-
-  console.log("Api key owner >> ", user);
 
   if (!user || user.isSuspended) {
     return throwUnauthorizedError("Invalid API key");
