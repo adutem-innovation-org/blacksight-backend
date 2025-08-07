@@ -77,6 +77,7 @@ export class MFAService {
         case MFAMethods.EMAIL:
           // TODO: Send email
           const { email, firstName } = await this.getUserData(userId);
+
           const result = await this.emailService.send({
             template: "mfa-code",
             message: {

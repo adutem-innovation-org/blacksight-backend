@@ -10,6 +10,7 @@ import {
   throwNotFoundError,
   throwServerError,
   throwUnprocessableEntityError,
+  UniversalBusinessChunker,
 } from "@/helpers";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
@@ -35,6 +36,8 @@ export class ProductRecommendationService {
   private static readonly logger: Logger = logger;
   private static eventEmitter: EventEmitter2 = eventEmitter;
 
+  private readonly chunker: UniversalBusinessChunker;
+
   private readonly productSourceModel: Model<IProductSource> = ProductSource;
 
   private readonly productSourcePagination: PaginationService<IProductSource>;
@@ -43,6 +46,7 @@ export class ProductRecommendationService {
   private readonly openai: OpenAI;
 
   constructor() {
+    this.chunker = UniversalBusinessChunker.getInstance();
     this.productSourcePagination = new PaginationService(
       this.productSourceModel
     );
@@ -190,7 +194,24 @@ export class ProductRecommendationService {
       const pineconeIndex = this.pinecone.Index("product-source");
 
       // const chunks = content.match(/(.{1,500})/g);
-      const chunks = content.match(/[^.!?]{1,500}[.!?]/g) || [];
+      // const chunks = content.match(/[^.!?]{1,500}[.!?]/g) || [];
+      const result = this.chunker.chunkContent(content);
+      const validation = this.chunker.validateOutput(result);
+
+      console.log(`Strategy: ${result.strategy}`);
+      console.log(
+        `Detected types: ${result.analysis.content_types.join(", ")}`
+      );
+      console.log(`Chunks: ${result.total_chunks}`);
+      console.log(`Valid: ${validation.valid}`);
+
+      result.chunks.forEach((chunk, i) => {
+        console.log(`Chunk ${i + 1}: ${chunk.type} (${chunk.size} chars)`);
+        console.log(`Summary: ${chunk.content_summary}`);
+        console.log(`Text: ${chunk.text}`);
+      });
+
+      const chunks = result.chunks;
 
       const chunkDocs = [];
 
@@ -202,7 +223,7 @@ export class ProductRecommendationService {
 
       try {
         for (let i = 0; i < chunks?.length; i++) {
-          const text = chunks[i];
+          const text = chunks[i].text;
           const embeddingResponse = await this.openai.embeddings.create({
             model: "text-embedding-3-small",
             input: text,

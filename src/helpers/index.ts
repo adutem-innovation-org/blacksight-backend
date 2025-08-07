@@ -10,6 +10,7 @@ export * from "./provider.helpers";
 export * from "./crypto.helpers";
 export * from "./pagination.helpers";
 export * from "./cleanup.helpers";
+export * from "./chunker.helper";
 
 export function toBoolean(value: string | boolean | undefined): boolean {
   if (value === undefined) return false;
