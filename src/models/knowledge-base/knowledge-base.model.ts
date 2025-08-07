@@ -2,12 +2,12 @@ import { Document, Types, Model, model, Schema } from "mongoose";
 import mongooseLeanVirtuals from "mongoose-lean-virtuals";
 const collectionName = "knowledge-bases";
 
-type Chunk = {
+export type Chunk = {
   chunkId: number;
   text: string;
 };
 
-const ChunkSchema: Schema<Chunk> = new Schema<Chunk>({
+export const ChunkSchema: Schema<Chunk> = new Schema<Chunk>({
   chunkId: {
     type: Number,
     required: [true, "Please provide chunk id"],
