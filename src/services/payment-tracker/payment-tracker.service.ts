@@ -526,8 +526,7 @@ export class PaymentTrackerService {
         fileId: new Types.ObjectId(id),
       });
 
-      // Delete file from storage if needed
-      // await this.storageService.deleteFile(paymentFile.fileUrl);
+      await this.storageService.deleteFile(paymentFile.fileUrl);
     } catch (error) {
       PaymentTrackerService.logger.error(
         "Error during payment file cleanup:",
