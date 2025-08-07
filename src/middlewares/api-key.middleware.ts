@@ -33,6 +33,8 @@ export const verifyApiKey = async (
     return next();
   }
 
+  console.log("Hashed key", hashedKey);
+
   const keyRecord = await apiKeyService.getApiKey(hashedKey);
 
   console.log("Key record", keyRecord);
