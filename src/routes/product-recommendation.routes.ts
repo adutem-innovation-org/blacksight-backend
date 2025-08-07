@@ -43,7 +43,7 @@ productRecommendationRouter.get(
 );
 
 productRecommendationRouter.delete(
-  "/delete/:id",
+  "/source/delete/:id",
   permissionRequirement([UserTypes.USER]),
   productRecommendationController.deleteProductsSource
 );

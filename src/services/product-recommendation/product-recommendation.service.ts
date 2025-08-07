@@ -194,7 +194,8 @@ export class ProductRecommendationService {
 
       const chunkDocs = [];
 
-      if (chunks.length === 0) throwUnprocessableEntityError("No chunks found");
+      if (chunks.length === 0)
+        throwUnprocessableEntityError("Empty or very small file uploaded.");
 
       // Used for cleanup during failure case
       totalChunks = chunks.length;
@@ -203,7 +204,6 @@ export class ProductRecommendationService {
         for (let i = 0; i < chunks?.length; i++) {
           const text = chunks[i];
           const embeddingResponse = await this.openai.embeddings.create({
-            // model: "text-embedding-ada-002",
             model: "text-embedding-3-small",
             input: text,
           });
@@ -295,7 +295,7 @@ export class ProductRecommendationService {
           error?.message || error || "An unknown error has occurred"
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       ProductRecommendationService.logger.error(
         "Unable to add products source."
       );
@@ -303,6 +303,7 @@ export class ProductRecommendationService {
         "Attempting to clean up pinecone"
       );
       this.cleanUpPinecone(documentId, businessId, totalChunks);
+      return throwUnprocessableEntityError(error?.message || error);
     } finally {
       ProductRecommendationService.logger.info(
         "Cleaning up uploaded products source file."
