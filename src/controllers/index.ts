@@ -12,3 +12,4 @@ export * from "./settings.controller";
 export * from "./templates.controller";
 export * from "./agent.controller";
 export * from "./product-recommendation.controller";
+export * from "./payment-tracker.controller";

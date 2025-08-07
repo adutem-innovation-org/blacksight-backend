@@ -12,6 +12,7 @@ import { settingsRouter } from "./settings.routes";
 import { templatesRouter } from "./templates.routes";
 import { agentRouter } from "./agent.routes";
 import { productRecommendationRouter } from "./product-recommendation.routes";
+import { paymentTrackerRouter } from "./payment-tracker.routes";
 
 export const appRouter = createRouter();
 
@@ -28,3 +29,4 @@ appRouter.use("/settings", settingsRouter);
 appRouter.use("/template", templatesRouter);
 appRouter.use("/agent", agentRouter);
 appRouter.use("/product-recommendation", productRecommendationRouter);
+appRouter.use("/payment-tracker", paymentTrackerRouter);
