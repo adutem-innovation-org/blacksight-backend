@@ -62,6 +62,7 @@ ProductSourceSchema.virtual("connectedBots", {
   localField: "_id",
   foreignField: "productSourceId",
   options: {
+    select: "name _id status",
     lean: true,
   },
 });
@@ -72,6 +73,7 @@ ProductSourceSchema.virtual("createdBy", {
   foreignField: "_id",
   justOne: true,
   options: {
+    select: "firstName lastName email",
     lean: true,
   },
 });
@@ -79,18 +81,24 @@ ProductSourceSchema.virtual("createdBy", {
 ProductSourceSchema.plugin(mongooseLeanVirtuals);
 
 function autoPopulate(this: any, next: Function) {
-  this.populate("connectedBots", {
-    select: "name _id status",
-  });
-  this.populate("createdBy", {
-    select: "firstName lastName email",
-  });
+  this.populate("connectedBots");
+  this.populate("createdBy");
   next();
 }
 
 ProductSourceSchema.pre("find", autoPopulate);
 ProductSourceSchema.pre("findOne", autoPopulate);
 ProductSourceSchema.pre("findOneAndUpdate", autoPopulate);
+
+ProductSourceSchema.post("find", function (docs) {
+  docs.forEach((doc: any) => {
+    doc.createdBy = {
+      firstName: doc.createdBy?.firstName,
+      lastName: doc.createdBy?.lastName,
+      email: doc.createdBy?.email,
+    };
+  });
+});
 
 export const ProductSource: Model<IProductSource> = model<IProductSource>(
   "product-sources",
