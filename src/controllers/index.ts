@@ -11,3 +11,4 @@ export * from "./auth-admin.controller";
 export * from "./settings.controller";
 export * from "./templates.controller";
 export * from "./agent.controller";
+export * from "./product-recommendation.controller";

@@ -11,6 +11,7 @@ import { apiKeyRouter } from "./api-key.routes";
 import { settingsRouter } from "./settings.routes";
 import { templatesRouter } from "./templates.routes";
 import { agentRouter } from "./agent.routes";
+import { productRecommendationRouter } from "./product-recommendation.routes";
 
 export const appRouter = createRouter();
 
@@ -26,3 +27,4 @@ appRouter.use("/api-key", apiKeyRouter);
 appRouter.use("/settings", settingsRouter);
 appRouter.use("/template", templatesRouter);
 appRouter.use("/agent", agentRouter);
+appRouter.use("/product-recommendation", productRecommendationRouter);
