@@ -1,7 +1,11 @@
 import { PaymentInterval } from "@/enums";
 import { Document, Model, Schema, model, Types } from "mongoose";
+import { Business, IUser } from "../auth";
+import mongooseLeanVirtuals from "mongoose-lean-virtuals";
 
 export interface IBusinessCustomerPayment extends Document<Types.ObjectId> {
+  userId: Types.ObjectId;
+  uploadedBy?: Pick<IUser, "firstName" | "lastName" | "email">;
   fileId: Types.ObjectId; // The _id of the file from which it was populated
   name: string;
   email: string;
@@ -16,6 +20,11 @@ export interface IBusinessCustomerPayment extends Document<Types.ObjectId> {
 const BusinessCustomerPaymentSchema: Schema<IBusinessCustomerPayment> =
   new Schema<IBusinessCustomerPayment>(
     {
+      userId: {
+        type: Schema.Types.ObjectId,
+        required: [true, "Please provide business identifier"],
+        ref: "users",
+      },
       fileId: {
         type: Schema.Types.ObjectId,
         required: [true, "Please provide file id"],
@@ -55,6 +64,28 @@ const BusinessCustomerPaymentSchema: Schema<IBusinessCustomerPayment> =
       toObject: { virtuals: true },
     }
   );
+
+BusinessCustomerPaymentSchema.virtual("uploadedBy", {
+  ref: "users",
+  localField: "userId",
+  foreignField: "_id",
+  justOne: true,
+  options: {
+    select: "firstName lastName email",
+    lean: true,
+  },
+});
+
+BusinessCustomerPaymentSchema.plugin(mongooseLeanVirtuals);
+
+function autoPopulate(this: any, next: Function) {
+  this.populate("uploadedBy");
+  next();
+}
+
+BusinessCustomerPaymentSchema.pre("find", autoPopulate);
+BusinessCustomerPaymentSchema.pre("findOne", autoPopulate);
+BusinessCustomerPaymentSchema.pre("findOneAndUpdate", autoPopulate);
 
 export const BusinessCustomerPayment: Model<IBusinessCustomerPayment> =
   model<IBusinessCustomerPayment>(

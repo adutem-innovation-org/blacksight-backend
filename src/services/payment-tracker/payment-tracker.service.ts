@@ -442,6 +442,7 @@ export class PaymentTrackerService {
       // Process payment records if they exist (from middleware)
       if (body.paymentRecords && body.paymentRecords.length > 0) {
         const bcpRecords = body.paymentRecords.map((record: any) => ({
+          userId,
           fileId: paymentFile._id,
           ...record,
           nextPayment: this.computeNextPaymentDate(
@@ -584,6 +585,7 @@ export class PaymentTrackerService {
               update: {
                 $set: {
                   ...record,
+                  userId: new Types.ObjectId(auth.userId),
                   nextPayment: this.computeNextPaymentDate(
                     record.lastPayment,
                     record.paymentInterval
@@ -609,6 +611,7 @@ export class PaymentTrackerService {
               {
                 $set: {
                   ...record,
+                  user: new Types.ObjectId(auth.userId),
                   nextPayment: this.computeNextPaymentDate(
                     record.lastPayment,
                     record.paymentInterval
@@ -662,10 +665,15 @@ export class PaymentTrackerService {
   }
 
   async getBCPById(auth: AuthData, id: string) {
-    const bcp = await this.businessCustomerPaymentModel.findById(id).populate({
-      path: "fileId",
-      model: "payment-files",
-    });
+    const bcp = await this.businessCustomerPaymentModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        userId: new Types.ObjectId(auth.userId),
+      })
+      .populate({
+        path: "fileId",
+        model: "payment-files",
+      });
 
     if (!bcp) return throwNotFoundError("Business customer payment not found");
 
@@ -682,10 +690,15 @@ export class PaymentTrackerService {
   }
 
   async updateBCP(auth: AuthData, id: string, body: UpdateBCPDto) {
-    const bcp = await this.businessCustomerPaymentModel.findById(id).populate({
-      path: "fileId",
-      model: "payment-files",
-    });
+    const bcp = await this.businessCustomerPaymentModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        userId: new Types.ObjectId(auth.userId),
+      })
+      .populate({
+        path: "fileId",
+        model: "payment-files",
+      });
 
     if (!bcp) return throwNotFoundError("Business customer payment not found");
 
@@ -718,10 +731,15 @@ export class PaymentTrackerService {
   }
 
   async deleteBCP(auth: AuthData, id: string) {
-    const bcp = await this.businessCustomerPaymentModel.findById(id).populate({
-      path: "fileId",
-      model: "payment-files",
-    });
+    const bcp = await this.businessCustomerPaymentModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        userId: new Types.ObjectId(auth.userId),
+      })
+      .populate({
+        path: "fileId",
+        model: "payment-files",
+      });
 
     if (!bcp) return throwNotFoundError("Business customer payment not found");
 
