@@ -46,3 +46,6 @@ nodemon.json
 # Others
 *samples
 *artifacts
+firebase-cors.json
+template-formatted.json
+parser.js
