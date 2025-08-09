@@ -1,3 +1,4 @@
+import { IEmailTemplate } from "@/models";
 import { EmailOptions } from "email-templates";
 
 export interface IEmailMessage {
@@ -15,6 +16,10 @@ export interface IEmailOptions extends EmailOptions {
   template: string;
 }
 
+export interface IExternalEmailOptions extends Omit<IEmailOptions, "template"> {
+  templateId: string;
+}
+
 export type MailResponse = {
   error?: any;
   data?: any;
@@ -28,6 +33,16 @@ export abstract class MailService {
   }
 
   abstract send(options: EmailOptions): Promise<MailResponse>;
+
+  abstract sendEmailWithMongodbTemplate(
+    options: IExternalEmailOptions
+  ): Promise<MailResponse>;
+
+  abstract sendExternalEmailWithTemplate(options: {
+    message: IEmailMessage;
+    template: IEmailTemplate;
+    locals?: any;
+  }): Promise<MailResponse>;
 
   abstract render(options: EmailOptions): Promise<MailResponse>;
 }
