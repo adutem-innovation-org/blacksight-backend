@@ -1,7 +1,8 @@
 import { createRouter } from "@/helpers";
 import { authRouter } from "./auth.routes";
 import { analyticsRouter } from "./analytics.routes";
-import { reminderRouter } from "./reminder.routes";
+// import { reminderRouter } from "./reminder.routes";
+import { reminderRouter } from "./prod-reminder.routes";
 import { knowledgeBaseRouter } from "./knowledge-base.routes";
 import { botRouter } from "./bot.routes";
 import { calendarRouter } from "./calendar.routes";
