@@ -3,7 +3,7 @@ import {
   UpdateBCPDto,
   UpdatePaymentFileDto,
 } from "@/decorators";
-import { PaymentInterval, UserTypes } from "@/enums";
+import { PaymentInterval, ReminderChannels, UserTypes } from "@/enums";
 import {
   isOwnerUser,
   isSuperAdmin,
@@ -45,7 +45,10 @@ export class PaymentTrackerService {
   private readonly bcpPagination: PaginationService<IBusinessCustomerPayment>;
   private readonly storageService: StorageService;
 
-  static middlewares: Record<string, MiddleWare> = {
+  static middlewares: Record<
+    "parsePaymentFile" | "extractBCPFromFile",
+    MiddleWare
+  > = {
     parsePaymentFile: async (req, res, next) => {
       const file = req.file;
 
@@ -85,7 +88,10 @@ export class PaymentTrackerService {
               const workbook = xlsx.readFile(file.path);
               const sheetName = workbook.SheetNames[0];
               const sheet = workbook.Sheets[sheetName];
-              const parsed = xlsx.utils.sheet_to_json(sheet);
+              const parsed = xlsx.utils.sheet_to_json(sheet, {
+                raw: false,
+                dateNF: "mm/dd/yyyy",
+              });
               console.log("parsed", parsed);
               parsed.forEach((row) => {
                 PaymentTrackerService.sanitizeAndValidateRow(records, row);
@@ -131,6 +137,88 @@ export class PaymentTrackerService {
         //     err.message
         //   );
         // }
+      }
+    },
+
+    extractBCPFromFile: async (req, res, next) => {
+      try {
+        const { fileId, channel } = req.body;
+
+        if (!fileId) {
+          return next(throwBadRequestError("Please select a payment file."));
+        }
+
+        if (!Types.ObjectId.isValid(fileId)) {
+          return next(throwBadRequestError("Invalid file ID format."));
+        }
+
+        // Build projection based on channel
+        let projectStage = {};
+        switch (channel) {
+          case ReminderChannels.BOTH:
+            projectStage = { email: 1, phone: 1 };
+            break;
+          case ReminderChannels.EMAIL:
+            projectStage = { email: 1 };
+            break;
+          case ReminderChannels.SMS:
+            projectStage = { phone: 1 };
+            break;
+          default:
+            return next(
+              throwBadRequestError("Please specify a valid reminder channel.")
+            );
+        }
+
+        const result = await BusinessCustomerPayment.aggregate([
+          { $match: { fileId: new Types.ObjectId(fileId) } },
+          { $project: projectStage },
+          {
+            $group: {
+              _id: null,
+              emails: {
+                $addToSet: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $ne: ["$email", null] },
+                        { $ne: ["$email", ""] },
+                      ],
+                    },
+                    "$email",
+                    "$$REMOVE",
+                  ],
+                },
+              },
+              phones: {
+                $addToSet: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $ne: ["$phone", null] },
+                        { $ne: ["$phone", ""] },
+                      ],
+                    },
+                    "$phone",
+                    "$$REMOVE",
+                  ],
+                },
+              },
+            },
+          },
+        ]);
+
+        if (!result.length) {
+          return next(
+            throwBadRequestError("No records found for the specified file.")
+          );
+        }
+
+        req.body.emails = result[0].emails || [];
+        req.body.phones = result[0].phones || [];
+        next();
+      } catch (error) {
+        next(error);
       }
     },
   };
