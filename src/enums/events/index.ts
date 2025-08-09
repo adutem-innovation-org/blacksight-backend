@@ -7,3 +7,11 @@ export enum Events {
   CHARGE_WRITE_KNOWLEDGE_BASE = "charge-write-knwoledge-base",
   CHARGE_AUDIO_TRANSCRIPTION = "charge-audio-transcription",
 }
+
+export enum QueueEnums {
+  REMINDER_PROCESSING = "reminder processing",
+}
+
+export enum QueueJobs {
+  PROCESS_REMINDER = "process-reminder",
+}
