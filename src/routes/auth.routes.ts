@@ -28,6 +28,8 @@ import {
   SuspendUserDto,
   EnableSMSMFADto,
   DisableMFAMethodDto,
+  SendMFACodeDto,
+  VerifyMFACodeDto,
 } from "@/decorators";
 import { AuthAdminController, AuthController } from "@/controllers";
 import { UserTypes } from "@/enums";
@@ -284,6 +286,7 @@ authRouter.post(
   "/mfa/send-code",
   validatePartialToken,
   getRequestInfo,
+  validateDTO(SendMFACodeDto),
   authController.sendMFACode
 );
 
@@ -291,6 +294,7 @@ authRouter.post(
   "/mfa/verify-code",
   validatePartialToken,
   getRequestInfo,
+  validateDTO(VerifyMFACodeDto),
   authController.verifyMFACode
 );
 
