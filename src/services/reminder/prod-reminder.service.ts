@@ -302,7 +302,7 @@ export class EnhancedReminderService {
     const sortOptions: any = {};
     sortOptions[sortBy] = sortOrder === "desc" ? -1 : 1;
 
-    const [reminders, total] = await Promise.all([
+    const [data, total] = await Promise.all([
       this.reminderModel
         .find(query)
         .sort(sortOptions)
@@ -313,7 +313,7 @@ export class EnhancedReminderService {
     ]);
 
     return {
-      reminders,
+      data,
       pagination: {
         page,
         limit,
@@ -321,6 +321,8 @@ export class EnhancedReminderService {
         pages: Math.ceil(total / limit),
         hasNext: page * limit < total,
         hasPrev: page > 1,
+        prev: page > 1,
+        next: page * limit < total,
       },
     };
   }
