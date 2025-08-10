@@ -300,7 +300,7 @@ export class ReminderController {
       authData.userId
     );
 
-    return sendSuccessResponse(res, data);
+    return sendSuccessResponse(res, { data });
   };
 
   // Cleanup completed reminders
