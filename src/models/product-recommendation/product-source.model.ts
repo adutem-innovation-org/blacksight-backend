@@ -60,7 +60,7 @@ const ProductSourceSchema: Schema<IProductSource> = new Schema<IProductSource>(
 ProductSourceSchema.virtual("connectedBots", {
   ref: "bots",
   localField: "_id",
-  foreignField: "productSourceId",
+  foreignField: "productsSourceIds",
   options: {
     select: "name _id status",
     lean: true,
