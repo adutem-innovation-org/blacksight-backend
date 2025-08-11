@@ -1,4 +1,4 @@
-import { AddProductsSourceDto } from "@/decorators";
+import { AddProductsSourceDto, AttachAgentDto } from "@/decorators";
 import { KnowledgeBaseSources } from "@/enums";
 import { sendSuccessResponse, throwBadRequestError } from "@/helpers";
 import { GenericReq } from "@/interfaces";
@@ -48,6 +48,15 @@ export class ProductRecommendationController {
     const data = await this.productRecommendationService.deleteProductsSource(
       req.authData!,
       req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  attachAgent = async (req: GenericReq<AttachAgentDto>, res: Response) => {
+    const data = await this.productRecommendationService.attachAgent(
+      req.authData!,
+      req.params.id,
+      req.body.agentId
     );
     return sendSuccessResponse(res, data);
   };

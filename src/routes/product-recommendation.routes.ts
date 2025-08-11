@@ -1,5 +1,5 @@
 import { ProductRecommendationController } from "@/controllers";
-import { AddProductsSourceDto } from "@/decorators";
+import { AddProductsSourceDto, AttachAgentDto } from "@/decorators";
 import { UserTypes } from "@/enums";
 import { createRouter } from "@/helpers";
 import {
@@ -46,4 +46,10 @@ productRecommendationRouter.delete(
   "/source/delete/:id",
   permissionRequirement([UserTypes.USER]),
   productRecommendationController.deleteProductsSource
+);
+
+productRecommendationRouter.post(
+  "/source/attach-agent/:id",
+  validateDTO(AttachAgentDto),
+  productRecommendationController.attachAgent
 );

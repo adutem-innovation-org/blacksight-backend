@@ -14,7 +14,7 @@ import {
 } from "@/helpers";
 import { AuthData } from "@/interfaces";
 import { logger } from "@/logging";
-import { IBot, IProductSource, ProductSource } from "@/models";
+import { Bot, IBot, IProductSource, ProductSource } from "@/models";
 import { eventEmitter, PaginationService } from "@/utils";
 import { Pinecone } from "@pinecone-database/pinecone";
 import EventEmitter2 from "eventemitter2";
@@ -39,6 +39,7 @@ export class ProductRecommendationService {
   private readonly chunker: UniversalBusinessChunker;
 
   private readonly productSourceModel: Model<IProductSource> = ProductSource;
+  private readonly botModel: Model<IBot> = Bot;
 
   private readonly productSourcePagination: PaginationService<IProductSource>;
   private readonly botSharedService: BotSharedService;
@@ -448,5 +449,26 @@ export class ProductRecommendationService {
     await this.botSharedService.disconnectProductsSource(auth, id);
 
     return { message: "Knowledge base deleted.", productsSource };
+  }
+
+  async attachAgent(auth: AuthData, sourceId: string, agentId: string) {
+    const businessId = auth.userId;
+    const agent = await this.botModel.findOne({
+      _id: new Types.ObjectId(agentId),
+      businessId: new Types.ObjectId(businessId),
+    });
+    if (!agent) return throwNotFoundError("Agent not found");
+
+    const source = await this.productSourceModel.findOne({
+      _id: new Types.ObjectId(sourceId),
+      businessId: businessId,
+    });
+    if (!source) return throwNotFoundError("Products source not found");
+
+    agent.productsSourceIds = agent.productsSourceIds || [];
+    agent.productsSourceIds.push(new Types.ObjectId(sourceId));
+    await agent.save();
+
+    return { message: "Products source attached to agent." };
   }
 }
