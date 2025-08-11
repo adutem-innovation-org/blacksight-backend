@@ -53,3 +53,9 @@ productRecommendationRouter.post(
   validateDTO(AttachAgentDto),
   productRecommendationController.attachAgent
 );
+
+productRecommendationRouter.post(
+  "/source/detach-agent/:id",
+  validateDTO(AttachAgentDto),
+  productRecommendationController.detachAgent
+);

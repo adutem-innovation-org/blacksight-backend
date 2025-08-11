@@ -471,4 +471,30 @@ export class ProductRecommendationService {
 
     return { message: "Products source attached to agent." };
   }
+
+  async detachAgent(auth: AuthData, sourceId: string, agentId: string) {
+    const businessId = auth.userId;
+
+    const agent = await this.botModel.findOne({
+      _id: new Types.ObjectId(agentId),
+      businessId: new Types.ObjectId(businessId),
+    });
+
+    if (!agent) return throwNotFoundError("Agent not found");
+
+    const source = await this.productSourceModel.findOne({
+      _id: new Types.ObjectId(sourceId),
+      businessId: businessId,
+    });
+
+    if (!source) return throwNotFoundError("Products source not found");
+
+    agent.productsSourceIds = agent.productsSourceIds || [];
+    agent.productsSourceIds = agent.productsSourceIds.filter(
+      (id) => !id.equals(sourceId)
+    );
+    await agent.save();
+
+    return { message: "Products source detached from agent." };
+  }
 }

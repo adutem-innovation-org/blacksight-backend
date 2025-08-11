@@ -60,4 +60,13 @@ export class ProductRecommendationController {
     );
     return sendSuccessResponse(res, data);
   };
+
+  detachAgent = async (req: GenericReq<AttachAgentDto>, res: Response) => {
+    const data = await this.productRecommendationService.detachAgent(
+      req.authData!,
+      req.params.id,
+      req.body.agentId
+    );
+    return sendSuccessResponse(res, data);
+  };
 }
