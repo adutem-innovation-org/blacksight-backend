@@ -34,11 +34,15 @@ import {
 import { config } from "@/config";
 import { ReminderProcessor, ReminderQueueEvents } from "./reminder.processor";
 import {
+  isOwnerUser,
+  isSuperAdmin,
   logJsonError,
   throwBadRequestError,
+  throwForbiddenError,
   throwNotFoundError,
 } from "@/helpers";
 import {
+  AuthData,
   PaginationOptions,
   ReminderAnalytics,
   ReminderFilters,
@@ -500,7 +504,7 @@ export class EnhancedReminderService {
 
   // Delete reminder (hard delete)
   async deleteReminder(userId: string, reminderId: string) {
-    const reminder = await this.reminderModel.findOne({
+    const reminder = await this.reminderModel.findOneAndDelete({
       _id: new Types.ObjectId(reminderId),
       userId: new Types.ObjectId(userId),
     });
@@ -509,9 +513,7 @@ export class EnhancedReminderService {
       throwNotFoundError("Reminder not found");
     }
 
-    await this.reminderModel.findByIdAndDelete(reminderId);
-
-    return { message: "Reminder deleted successfully" };
+    return { message: "Reminder deleted successfully", reminder };
   }
 
   // Get reminder analytics
@@ -1158,12 +1160,25 @@ export class EnhancedReminderService {
   }
 
   // Management methods
-  async pauseReminder(reminderId: string) {
-    await this.reminderModel.findByIdAndUpdate(reminderId, { isActive: false });
+  async pauseReminder(auth: AuthData, reminderId: string) {
+    const reminder = await this.setReminderStatus(auth, reminderId, false);
+    return { reminder, message: "Reminder paused" };
   }
 
-  async resumeReminder(reminderId: string) {
-    await this.reminderModel.findByIdAndUpdate(reminderId, { isActive: true });
+  async resumeReminder(auth: AuthData, reminderId: string) {
+    const reminder = await this.setReminderStatus(auth, reminderId, true);
+    return { reminder, message: "Reminder resumed" };
+  }
+
+  async setReminderStatus(auth: AuthData, id: string, status: boolean) {
+    const reminder = await this.reminderModel.findById(id);
+    if (!reminder) return throwNotFoundError("Reminder not found");
+    if (!isOwnerUser(auth, reminder.userId) && !isSuperAdmin(auth)) {
+      return throwForbiddenError("You are not allowed to access this resource");
+    }
+    reminder.isActive = status;
+    await reminder.save();
+    return reminder;
   }
 
   async cancelReminder(reminderId: string) {

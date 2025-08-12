@@ -270,24 +270,18 @@ export class ReminderController {
   pauseReminder = async (req: Request, res: Response) => {
     const { authData, params } = req;
 
-    await this.reminderService.pauseReminder(params.id);
+    const data = await this.reminderService.pauseReminder(authData, params.id);
 
-    return sendSuccessResponse(res, {
-      message: "Reminder paused successfully",
-      reminderId: params.id,
-    });
+    return sendSuccessResponse(res, data);
   };
 
   // Resume/activate reminder
   resumeReminder = async (req: Request, res: Response) => {
     const { authData, params } = req;
 
-    await this.reminderService.resumeReminder(params.id);
+    const data = await this.reminderService.resumeReminder(authData, params.id);
 
-    return sendSuccessResponse(res, {
-      message: "Reminder resumed successfully",
-      reminderId: params.id,
-    });
+    return sendSuccessResponse(res, data);
   };
 
   // Cancel reminder
