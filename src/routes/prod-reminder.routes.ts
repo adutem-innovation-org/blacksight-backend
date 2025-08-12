@@ -30,12 +30,29 @@ reminderRouter.post(
   reminderController.sendInstantReminder
 );
 
+reminderRouter.post(
+  "/instant/bcp",
+  rateLimiter({ limit: 20, ttl: 5 * 60 * 1000 }),
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(SendInstantReminderDto),
+  reminderController.sendInstantReminder
+);
+
 // Create reminder (scheduled, recurring, or event-based)
 reminderRouter.post(
   "/create",
   rateLimiter({ limit: 50, ttl: 5 * 60 * 1000 }), // 50 requests per 5 minutes
   permissionRequirement([UserTypes.USER]),
   PaymentTrackerService.middlewares.extractBCPFromFile,
+  validateDTO(CreateReminderDto),
+  reminderController.createReminder
+);
+
+// Create reminder (scheduled, recurring, or event-based)
+reminderRouter.post(
+  "/create/bcp",
+  rateLimiter({ limit: 50, ttl: 5 * 60 * 1000 }), // 50 requests per 5 minutes
+  permissionRequirement([UserTypes.USER]),
   validateDTO(CreateReminderDto),
   reminderController.createReminder
 );
