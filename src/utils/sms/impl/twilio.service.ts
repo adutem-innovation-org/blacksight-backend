@@ -47,12 +47,12 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
         };
       }
 
-      console.log("Starting to render body...", options);
+      // console.log("Starting to render body...", options);
 
       // Render message body
       const body = await this.render(options);
 
-      console.log("Body rendered....", body);
+      // console.log("Body rendered....", body);
 
       if (!body) {
         return { success: false, error: "Message body cannot be empty" };
@@ -66,7 +66,7 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
         };
       }
 
-      console.log("Preparing message options....");
+      // console.log("Preparing message options....");
 
       // Prepare message options
       const messageOptions: any = {
@@ -75,7 +75,7 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
         to: options.to,
       };
 
-      console.log("Message options prepared....", messageOptions);
+      // console.log("Message options prepared....", messageOptions);
 
       // Add optional parameters
       if (options.statusCallback)
@@ -84,12 +84,12 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
       if (options.validityPeriod)
         messageOptions.validityPeriod = options.validityPeriod;
 
-      console.log("Final message options....", messageOptions);
+      // console.log("Final message options....", messageOptions);
 
       // Send with retry logic
       const message = await this.sendWithRetry(messageOptions);
 
-      console.log("Message sent successfully...", message);
+      // console.log("Message sent successfully...", message);
 
       return {
         success: true,
@@ -98,6 +98,80 @@ export class TwilioMessagingService extends SmsService<MessageInstance> {
       };
     } catch (error: any) {
       console.error("SMS send failed:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to send SMS",
+      };
+    }
+  }
+
+  async sendWithoutRetry(
+    options: ISmsOptions
+  ): Promise<ISmsResult<MessageInstance>> {
+    try {
+      // Validate required fields
+      if (!options.to?.trim()) {
+        return { success: false, error: "Recipient phone number is required" };
+      }
+
+      if (!this.validatePhoneNumber(options.to)) {
+        return {
+          success: false,
+          error: "Invalid recipient phone number format",
+        };
+      }
+
+      // console.log("Starting to render body...", options);
+
+      // Render message body
+      const body = await this.render(options);
+
+      // console.log("Body rendered....", body);
+
+      if (!body) {
+        return { success: false, error: "Message body cannot be empty" };
+      }
+
+      // Validate message length (Twilio SMS limit is 1600 characters)
+      if (body.length > 1600) {
+        return {
+          success: false,
+          error: `Message too long: ${body.length} characters (max: 1600)`,
+        };
+      }
+
+      // console.log("Preparing message options....");
+
+      // Prepare message options
+      const messageOptions: any = {
+        body: this.sanitizeInput(body),
+        from: options.from || this.sender,
+        to: options.to,
+      };
+
+      // console.log("Message options prepared....", messageOptions);
+
+      // Add optional parameters
+      if (options.statusCallback)
+        messageOptions.statusCallback = options.statusCallback;
+      if (options.maxPrice) messageOptions.maxPrice = options.maxPrice;
+      if (options.validityPeriod)
+        messageOptions.validityPeriod = options.validityPeriod;
+
+      // console.log("Final message options....", messageOptions);
+
+      // Send without retry logic - direct call to Twilio
+      const message = await this.twilioClient.messages.create(messageOptions);
+
+      // console.log("Message sent successfully without retry...", message);
+
+      return {
+        success: true,
+        data: message,
+        messageId: message.sid,
+      };
+    } catch (error: any) {
+      console.error("SMS send failed (no retry):", error);
       return {
         success: false,
         error: error.message || "Failed to send SMS",
