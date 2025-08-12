@@ -214,6 +214,40 @@ export class PaymentTrackerService {
           );
         }
 
+        if (
+          result[0].emails.length === 0 &&
+          result[0].phones.length === 0 &&
+          channel === ReminderChannels.BOTH
+        ) {
+          return next(
+            throwBadRequestError(
+              "No email or phone records found for the specified file."
+            )
+          );
+        }
+
+        if (
+          result[0].emails.length === 0 &&
+          [ReminderChannels.EMAIL, ReminderChannels.BOTH].includes(channel)
+        ) {
+          return next(
+            throwBadRequestError(
+              "No email records found for the specified file. Consider using a different channel."
+            )
+          );
+        }
+
+        if (
+          result[0].phones.length === 0 &&
+          [ReminderChannels.SMS, ReminderChannels.BOTH].includes(channel)
+        ) {
+          return next(
+            throwBadRequestError(
+              "No phone records found for the specified file. Consider using a different channel."
+            )
+          );
+        }
+
         req.body.emails = result[0].emails || [];
         req.body.phones = result[0].phones || [];
         next();
