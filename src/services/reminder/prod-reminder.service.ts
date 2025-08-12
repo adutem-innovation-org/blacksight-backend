@@ -122,14 +122,20 @@ export class EnhancedReminderService {
   // 2. Scheduled Reminders
   async scheduleReminder(data: {
     userId: string;
+    fileId?: string;
     tag: string;
     message: string;
     subject?: string;
+    email?: string;
+    phone?: string;
     emails?: string[];
     phones?: string[];
     channel: ReminderChannels;
+    category: ReminderCategory;
+    isBulk?: boolean;
     remindAt: Date;
     template?: string;
+    templateId?: string;
     templateData?: Record<string, any>;
     timezone?: string;
   }) {
@@ -137,7 +143,9 @@ export class EnhancedReminderService {
       ...data,
       userId: new Types.ObjectId(data.userId),
       type: ReminderTypes.SCHEDULED,
-      isBulk: Boolean(data.emails?.length || data.phones?.length),
+      isBulk: Boolean(
+        data?.isBulk || data.emails?.length || data.phones?.length
+      ),
       status: ReminderStatus.PENDING,
       nextExecution: data.remindAt,
     });
@@ -164,18 +172,24 @@ export class EnhancedReminderService {
   // 3. Recurring Reminders
   async createRecurringReminder(data: {
     userId: string;
+    fileId?: string;
     tag: string;
     message: string;
     subject?: string;
+    email?: string;
+    phone?: string;
     emails?: string[];
     phones?: string[];
     channel: ReminderChannels;
+    category: ReminderCategory;
+    isBulk?: boolean;
     recurrencePattern: RecurrencePattern;
     recurrenceInterval?: number;
     startDate: Date;
     endDate?: Date;
     maxExecutions?: number;
     template?: string;
+    templateId?: string;
     templateData?: Record<string, any>;
     timezone?: string;
     customCronExpression?: string;
@@ -192,7 +206,9 @@ export class EnhancedReminderService {
       ...data,
       userId: new Types.ObjectId(data.userId),
       type: ReminderTypes.RECURRING,
-      isBulk: Boolean(data.emails?.length || data.phones?.length),
+      isBulk: Boolean(
+        data?.isBulk || data.emails?.length || data.phones?.length
+      ),
       status: ReminderStatus.PENDING,
       nextExecution,
       recurrenceEnd: data.endDate,
@@ -204,16 +220,22 @@ export class EnhancedReminderService {
   // 4. Event-based Reminders
   async createEventBasedReminder(data: {
     userId: string;
+    fileId?: string;
     tag: string;
     message: string;
     subject?: string;
+    email?: string;
+    phone?: string;
     emails?: string[];
     phones?: string[];
     channel: ReminderChannels;
+    category: ReminderCategory;
+    isBulk?: boolean;
     eventDate: Date;
     eventTrigger: EventTrigger;
     triggerOffset: number; // minutes
     template?: string;
+    templateId?: string;
     templateData?: Record<string, any>;
     timezone?: string;
   }) {
@@ -241,7 +263,9 @@ export class EnhancedReminderService {
       ...data,
       userId: new Types.ObjectId(data.userId),
       type: ReminderTypes.EVENT_BASED,
-      isBulk: Boolean(data.emails?.length || data.phones?.length),
+      isBulk: Boolean(
+        data?.isBulk || data.emails?.length || data.phones?.length
+      ),
       status: ReminderStatus.PENDING,
       nextExecution,
     });
@@ -679,7 +703,12 @@ export class EnhancedReminderService {
 
   // Core Processing Logic
   private async processReminder(reminderId: string) {
-    const reminder = await this.reminderModel.findById(reminderId);
+    const reminder = await this.reminderModel.findOne({
+      _id: new Types.ObjectId(reminderId),
+      isActive: true,
+      status: ReminderStatus.PENDING,
+    });
+
     if (!reminder || !reminder.isActive) return;
 
     try {
@@ -732,6 +761,9 @@ export class EnhancedReminderService {
         }
       } else if (reminder.type !== ReminderTypes.RECURRING) {
         reminder.status = success ? ReminderStatus.SENT : ReminderStatus.FAILED;
+        reminder.isActive = success
+          ? false
+          : reminder.retryCount! < (reminder.maxRetries || 3);
         if (!success && reminder.retryCount! >= (reminder.maxRetries || 3)) {
           reminder.isActive = false;
         }
@@ -912,6 +944,12 @@ export class EnhancedReminderService {
   ): Date {
     const tz = timezone || "UTC";
     const current = moment.tz(currentDate, tz);
+    const now = moment.tz(tz);
+
+    // If the start date is still in the future, use it as the first execution
+    if (current.isAfter(now)) {
+      return current.toDate();
+    }
 
     if (customCron) {
       // Use cron-parser for custom expressions

@@ -43,17 +43,29 @@ export class CreateReminderDto {
   })
   readonly channel!: ReminderChannels;
 
+  @IsDefined({ message: "Please specify reminder category" })
+  @IsEnum(ReminderCategory, {
+    message: "Unsupported reminder category",
+  })
+  readonly category!: ReminderCategory;
+
   @IsDefined({ message: "Please specify reminder type" })
   @IsEnum(ReminderTypes, {
     message: "Unsupported reminder type",
   })
   readonly type!: ReminderTypes;
 
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isBulk?: boolean;
+
   // Email validation
   @ValidateIf(
     (o) =>
-      o.channel === ReminderChannels.EMAIL ||
-      o.channel === ReminderChannels.BOTH
+      (o.channel === ReminderChannels.EMAIL ||
+        o.channel === ReminderChannels.BOTH) &&
+      !o.isBulk
   )
   @IsOptional()
   @IsEmail({}, { message: "Email must be a valid email address" })
@@ -61,8 +73,9 @@ export class CreateReminderDto {
 
   @ValidateIf(
     (o) =>
-      o.channel === ReminderChannels.EMAIL ||
-      o.channel === ReminderChannels.BOTH
+      (o.channel === ReminderChannels.EMAIL ||
+        o.channel === ReminderChannels.BOTH) &&
+      o.isBulk
   )
   @IsOptional()
   @IsArray({ message: "Emails must be an array" })
@@ -72,7 +85,9 @@ export class CreateReminderDto {
   // Phone validation
   @ValidateIf(
     (o) =>
-      o.channel === ReminderChannels.SMS || o.channel === ReminderChannels.BOTH
+      (o.channel === ReminderChannels.SMS ||
+        o.channel === ReminderChannels.BOTH) &&
+      !o.isBulk
   )
   @IsOptional()
   @IsPhoneNumber(undefined, { message: "Phone must be a valid phone number" })
@@ -80,7 +95,9 @@ export class CreateReminderDto {
 
   @ValidateIf(
     (o) =>
-      o.channel === ReminderChannels.SMS || o.channel === ReminderChannels.BOTH
+      (o.channel === ReminderChannels.SMS ||
+        o.channel === ReminderChannels.BOTH) &&
+      o.isBulk
   )
   @IsOptional()
   @IsArray({ message: "Phones must be an array" })
@@ -106,6 +123,7 @@ export class CreateReminderDto {
 
   @ValidateIf((o) => o.type === ReminderTypes.RECURRING)
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: "Recurrence interval must be an integer" })
   @Min(1, { message: "Recurrence interval must be at least 1" })
   readonly recurrenceInterval?: number;
@@ -124,6 +142,7 @@ export class CreateReminderDto {
 
   @ValidateIf((o) => o.type === ReminderTypes.RECURRING)
   @IsOptional()
+  @Type(() => Number)
   @IsInt({ message: "Max executions must be an integer" })
   @Min(1, { message: "Max executions must be at least 1" })
   readonly maxExecutions?: number;
@@ -151,14 +170,28 @@ export class CreateReminderDto {
   @IsDefined({
     message: "Trigger offset is required for event-based reminders",
   })
+  @Type(() => Number)
   @IsInt({ message: "Trigger offset must be an integer" })
   @Min(0, { message: "Trigger offset must be at least 0" })
   readonly triggerOffset?: number;
 
-  // Optional fields
   @IsOptional()
   @IsString({ message: "Template must be of type string" })
   readonly template?: string;
+
+  @IsOptional()
+  @ValidateIf((o) => o.templateId !== "" && o.templateId !== undefined)
+  @IsMongoId({
+    message: "Template identifier must be a valid",
+  })
+  readonly templateId?: string;
+
+  @IsOptional()
+  @ValidateIf((o) => o.fileId !== "" && o.fileId !== undefined)
+  @IsMongoId({
+    message: "File identifier must be a valid",
+  })
+  readonly fileId?: string;
 
   @IsOptional()
   readonly templateData?: Record<string, any>;

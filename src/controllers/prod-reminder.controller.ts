@@ -92,6 +92,10 @@ export class ReminderController {
       );
     }
 
+    if (body.templateId && !Types.ObjectId.isValid(body.templateId)) {
+      return throwBadRequestError("Invalid template id");
+    }
+
     let data;
 
     switch (body.type) {
@@ -103,14 +107,20 @@ export class ReminderController {
         }
         data = await this.reminderService.scheduleReminder({
           userId: authData!.userId,
+          fileId: Boolean(body.fileId) ? body.fileId : undefined,
           tag: body.tag,
           message: body.message,
           subject: body.subject,
           channel: body.channel,
-          remindAt: body.remindAt,
+          category: body.category,
+          email: body.email || undefined,
+          phone: body.phone || undefined,
+          remindAt: new Date(body.remindAt),
           emails: body.emails || (body.email ? [body.email] : undefined),
           phones: body.phones || (body.phone ? [body.phone] : undefined),
+          isBulk: body.isBulk,
           template: body.template,
+          templateId: Boolean(body.templateId) ? body.templateId : undefined,
           templateData: body.templateData,
           timezone: body.timezone,
         });
@@ -124,18 +134,24 @@ export class ReminderController {
         }
         data = await this.reminderService.createRecurringReminder({
           userId: authData.userId,
+          fileId: Boolean(body.fileId) ? body.fileId : undefined,
           tag: body.tag,
           message: body.message,
           subject: body.subject,
           channel: body.channel,
+          category: body.category,
           recurrencePattern: body.recurrencePattern,
           recurrenceInterval: body.recurrenceInterval,
-          startDate: body.startDate,
-          endDate: body.endDate,
+          startDate: new Date(body.startDate),
+          endDate: body.endDate ? new Date(body.endDate) : undefined,
           maxExecutions: body.maxExecutions,
+          email: body.email || undefined,
+          phone: body.phone || undefined,
           emails: body.emails || (body.email ? [body.email] : undefined),
           phones: body.phones || (body.phone ? [body.phone] : undefined),
+          isBulk: body.isBulk,
           template: body.template,
+          templateId: Boolean(body.templateId) ? body.templateId : undefined,
           templateData: body.templateData,
           timezone: body.timezone,
           customCronExpression: body.customCronExpression,
@@ -154,16 +170,22 @@ export class ReminderController {
         }
         data = await this.reminderService.createEventBasedReminder({
           userId: authData.userId,
+          fileId: Boolean(body.fileId) ? body.fileId : undefined,
           tag: body.tag,
           message: body.message,
           subject: body.subject,
           channel: body.channel,
-          eventDate: body.eventDate,
+          category: body.category,
+          eventDate: new Date(body.eventDate),
           eventTrigger: body.eventTrigger,
           triggerOffset: body.triggerOffset,
+          email: body.email || undefined,
+          phone: body.phone || undefined,
           emails: body.emails || (body.email ? [body.email] : undefined),
           phones: body.phones || (body.phone ? [body.phone] : undefined),
+          isBulk: body.isBulk,
           template: body.template,
+          templateId: Boolean(body.templateId) ? body.templateId : undefined,
           templateData: body.templateData,
           timezone: body.timezone,
         });

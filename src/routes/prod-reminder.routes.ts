@@ -35,6 +35,7 @@ reminderRouter.post(
   "/create",
   rateLimiter({ limit: 50, ttl: 5 * 60 * 1000 }), // 50 requests per 5 minutes
   permissionRequirement([UserTypes.USER]),
+  PaymentTrackerService.middlewares.extractBCPFromFile,
   validateDTO(CreateReminderDto),
   reminderController.createReminder
 );
