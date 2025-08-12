@@ -4,6 +4,7 @@ import {
   TwilioMessagingService,
   MailgunEmailService,
   MailResponse,
+  ISmsResult,
 } from "@/utils";
 import cron from "node-cron";
 import moment from "moment-timezone";
@@ -16,7 +17,9 @@ import {
   IBusinessCustomerPayment,
   IEmailTemplate,
   IReminder,
+  ISMSTemplate,
   Reminder,
+  SMSTemplate,
 } from "@/models";
 import {
   EventTrigger,
@@ -42,6 +45,8 @@ export class EnhancedReminderService {
 
   private readonly reminderModel: Model<IReminder> = Reminder;
   private readonly emailTemplateModel: Model<IEmailTemplate> = EmailTemplate;
+  private readonly smsTemplateModel: Model<ISMSTemplate> = SMSTemplate;
+
   private readonly bcpModel: Model<IBusinessCustomerPayment> =
     BusinessCustomerPayment;
   private readonly smsService: TwilioMessagingService;
@@ -913,17 +918,104 @@ export class EnhancedReminderService {
         ? reminder.phones || []
         : [reminder.phone!];
 
-      for (const phone of recipients) {
-        const result = await this.smsService.send({
-          to: phone,
-          body: reminder.message,
-          template: reminder.template,
-          locals: reminder.templateData,
-        });
-
-        if (!result.success) {
-          logger.error("SMS send failed:", result.error);
+      // Fetch external templates ONCE before looping if needed
+      // Could use caching in the future
+      let template = null;
+      if (reminder.templateId) {
+        template = await this.smsTemplateModel.findById(reminder.templateId);
+        if (!template) {
+          logger.error(
+            `Template ${reminder.templateId} not found for reminder ${reminder._id}`
+          );
           return false;
+        }
+      }
+
+      let body = "";
+
+      if (reminder.templateId && template && template.content.trim()) {
+        body = template.content.trim();
+      } else if (reminder.template && reminder.template.trim()) {
+        body = reminder.template.trim();
+      } else {
+        body = reminder.message.trim();
+      }
+
+      if (!body) {
+        return false;
+      }
+
+      let hasFailures = false;
+
+      for (const phone of recipients) {
+        try {
+          const query: Record<string, any> = {
+            phone,
+            userId: new Types.ObjectId(reminder.userId),
+          };
+
+          if (
+            reminder?.fileId &&
+            reminder.category === ReminderCategory.PAYMENT
+          ) {
+            query["fileId"] = new Types.ObjectId(reminder.fileId);
+          }
+
+          // Fetch email data
+          const customerData = await this.bcpModel.findOne(query);
+
+          if (!customerData) {
+            logger.error(`Customer data not found for phone ${phone}`);
+            hasFailures = true;
+            continue;
+          }
+
+          let updatedData = {
+            ...(reminder.templateData ?? {}),
+            customerName: customerData.name.split(" ")[0],
+            customerEmail: customerData.email,
+            customerPhone: customerData?.phone ?? phone,
+            lastPayment: new Date(customerData.lastPayment).toLocaleString(
+              "en-US",
+              {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }
+            ),
+            nextPayment: new Date(customerData.nextPayment).toLocaleString(
+              "en-US",
+              {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }
+            ),
+            paymentInterval: customerData.paymentInterval,
+          };
+
+          let result: ISmsResult<any> | null = null;
+
+          result = await this.smsService.send({
+            to: phone,
+            body,
+            locals: updatedData,
+          });
+
+          if (!result.success) {
+            logger.error("SMS send failed:", result.error);
+            hasFailures = true;
+            continue;
+          }
+        } catch (smsError: any) {
+          logger.error(
+            `Failed to process SMS ${phone}: ${JSON.stringify(
+              smsError,
+              null,
+              2
+            )}`
+          );
+          hasFailures = true;
         }
       }
 
