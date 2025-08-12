@@ -1,15 +1,13 @@
 import { TemplateCategory, TemplateType } from "@/enums";
-import { Document, Model, model, Schema, Types } from "mongoose";
+import { Document, Types, Model, model, Schema } from "mongoose";
 
-export interface IEmailTemplate extends Document<Types.ObjectId> {
+export interface ISMSTemplate extends Document<Types.ObjectId> {
   id: string;
   name: string;
   description: string;
-  type: TemplateType.EMAIL;
+  type: TemplateType.SMS;
   category: TemplateCategory;
-  html: string;
-  design: Types.Map<any>;
-  preview?: string;
+  content: string;
   dynamicFields: string[];
   keywords: string[];
   createdBy: Types.ObjectId;
@@ -17,7 +15,7 @@ export interface IEmailTemplate extends Document<Types.ObjectId> {
   updatedAt: Date;
 }
 
-const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
+const SMSTemplateSchema: Schema<ISMSTemplate> = new Schema<ISMSTemplate>(
   {
     name: { type: String, required: [true, "Please provide template name"] },
     description: {
@@ -27,10 +25,10 @@ const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
     type: {
       type: String,
       enum: {
-        values: [TemplateType.EMAIL],
+        values: [TemplateType.SMS],
         message: "Unsupported template type",
       },
-      default: TemplateType.EMAIL,
+      default: TemplateType.SMS,
       required: [true, "Please provide template type"],
     },
     category: {
@@ -39,18 +37,9 @@ const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
         values: Object.values(TemplateCategory),
         message: "Invalid template category",
       },
-      default: TemplateCategory.PAYMENT,
       required: [true, "Please provide template category"],
     },
-    html: {
-      type: String,
-      required: [true, "Please provide template contents"],
-    },
-    design: {
-      type: Map,
-      of: Schema.Types.Mixed,
-    },
-    preview: { type: String },
+    content: { type: String, required: [true, "Template content is required"] },
     dynamicFields: {
       type: [String],
       required: [true, "Please provide template dynamic fields"],
@@ -61,6 +50,7 @@ const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
     },
     createdBy: {
       type: Schema.Types.ObjectId,
+      ref: "users",
       required: [true, "Please provide creator ID"],
     },
   },
@@ -72,7 +62,7 @@ const EmailTemplateSchema: Schema<IEmailTemplate> = new Schema<IEmailTemplate>(
   }
 );
 
-export const EmailTemplate: Model<IEmailTemplate> = model<IEmailTemplate>(
-  "email-templates",
-  EmailTemplateSchema
+export const SMSTemplate: Model<ISMSTemplate> = model<ISMSTemplate>(
+  "sms-templates",
+  SMSTemplateSchema
 );
