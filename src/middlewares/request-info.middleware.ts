@@ -31,37 +31,38 @@ export const getRequestInfo = async (
 
   // Step 3: Lookup geolocation
   let location: IpData | undefined;
-  try {
-    if (!ip) {
-      location = { ip };
-      return;
-    }
-    const { data } = (await axios.get(
-      `https://api.ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
-    )) as {
-      data: {
-        ip: string;
-        city: string;
-        region_name: string;
-        country_name: string;
-        latitude: number;
-        longitude: number;
+
+  if (!ip || config.env === "development") {
+    location = { ip };
+  } else {
+    try {
+      const { data } = (await axios.get(
+        `https://api.ipapi.com/api/${ip}?access_key=${config.ipapi.apiKey}`
+      )) as {
+        data: {
+          ip: string;
+          city: string;
+          region_name: string;
+          country_name: string;
+          latitude: number;
+          longitude: number;
+        };
       };
-    };
-    location = {
-      ip: data.ip || ip,
-      city: data.city,
-      region: data.region_name,
-      country: data.country_name,
-      lat: data.latitude,
-      long: data.longitude,
-    };
-  } catch (error) {
-    logger.error("Unable to lookup location");
-    logJsonError(error);
-    location = {
-      ip,
-    };
+      location = {
+        ip: data.ip || ip,
+        city: data.city,
+        region: data.region_name,
+        country: data.country_name,
+        lat: data.latitude,
+        long: data.longitude,
+      };
+    } catch (error) {
+      logger.error("Unable to lookup location");
+      logJsonError(error);
+      location = {
+        ip,
+      };
+    }
   }
 
   req.ipData = location;
