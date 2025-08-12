@@ -33,7 +33,11 @@ import {
 } from "@/enums";
 import { config } from "@/config";
 import { ReminderProcessor, ReminderQueueEvents } from "./reminder.processor";
-import { throwBadRequestError, throwNotFoundError } from "@/helpers";
+import {
+  logJsonError,
+  throwBadRequestError,
+  throwNotFoundError,
+} from "@/helpers";
 import {
   PaginationOptions,
   ReminderAnalytics,
@@ -656,14 +660,14 @@ export class EnhancedReminderService {
     };
   }
 
-  // Queue Processing
+  // Queue Processing - FIXED VERSION
   private setupQueueProcessor() {
-    // Process reminders
+    // Process reminders with proper error handling
     ReminderProcessor.getInstance(
       QueueEnums.REMINDER_PROCESSING,
       async (job: Job) => {
         const { reminderId } = job.data;
-        await this.processReminder(reminderId);
+        await this.processReminder(reminderId, job.attemptsMade + 1);
       }
     );
 
@@ -689,7 +693,7 @@ export class EnhancedReminderService {
         isActive: true,
         nextExecution: { $lte: now },
       })
-      .limit(100); // Process in batches
+      .limit(100);
 
     for (const reminder of pendingReminders) {
       await this.reminderQueue.add(
@@ -700,25 +704,37 @@ export class EnhancedReminderService {
         {
           priority: reminder.priority || 5,
           attempts: reminder.maxRetries || 3,
-          backoff: { type: "exponential" },
+          backoff: {
+            type: "exponential",
+            delay: 2000, // Start with 2 seconds
+          },
+          // Add job options for better retry handling
+          removeOnComplete: 10,
+          removeOnFail: 50,
         }
       );
     }
   }
 
-  // Core Processing Logic
-  private async processReminder(reminderId: string) {
+  // Core Processing Logic - FIXED
+  private async processReminder(
+    reminderId: string,
+    currentAttempt: number = 1
+  ) {
     const reminder = await this.reminderModel.findOne({
       _id: new Types.ObjectId(reminderId),
       isActive: true,
-      status: ReminderStatus.PENDING,
+      status: { $in: [ReminderStatus.PENDING, ReminderStatus.FAILED] },
     });
 
-    if (!reminder || !reminder.isActive) return;
+    if (!reminder || !reminder.isActive) {
+      return; // Don't throw error for inactive reminders
+    }
+
+    let success = false;
+    let errorMessage = "";
 
     try {
-      let success = false;
-
       // Send via appropriate channel
       if (
         reminder.channel === ReminderChannels.EMAIL ||
@@ -735,59 +751,79 @@ export class EnhancedReminderService {
         success = success || smsSuccess;
       }
 
-      // Update reminder status
-      reminder.lastExecution = new Date();
-      reminder.executionCount += 1;
-
-      if (success) {
-        reminder.successCount += 1;
-        reminder.retryCount = 0;
-      } else {
-        reminder.failureCount += 1;
-        reminder.retryCount! += 1;
+      if (!success) {
+        throw new Error("Failed to send reminder via configured channels");
       }
 
-      // Handle recurring reminders
-      if (reminder.type === ReminderTypes.RECURRING && success) {
-        const nextExecution = this.calculateNextExecution(
-          reminder.nextExecution!,
-          reminder.recurrencePattern!,
-          reminder.recurrenceInterval,
-          reminder.timezone,
-          reminder.customCronExpression
-        );
-
-        if (this.shouldContinueRecurrence(reminder, nextExecution)) {
-          reminder.nextExecution = nextExecution;
-          reminder.status = ReminderStatus.PENDING;
-        } else {
-          reminder.status = ReminderStatus.COMPLETED;
-          reminder.isActive = false;
-        }
-      } else if (reminder.type !== ReminderTypes.RECURRING) {
-        reminder.status = success ? ReminderStatus.SENT : ReminderStatus.FAILED;
-        reminder.isActive = success
-          ? false
-          : reminder.retryCount! < (reminder.maxRetries || 3);
-        if (!success && reminder.retryCount! >= (reminder.maxRetries || 3)) {
-          reminder.isActive = false;
-        }
-      }
-
-      await reminder.save();
+      // SUCCESS CASE - Update reminder
+      await this.handleSuccessfulReminder(reminder);
     } catch (error: any) {
-      logger.error("Error processing reminder:", error);
-      reminder.lastError = error.message;
-      reminder.failureCount += 1;
-      reminder.retryCount! += 1;
+      errorMessage = error.message;
+      logger.error(
+        `Error processing reminder ${reminderId} (attempt ${currentAttempt}):`,
+        error
+      );
 
-      if (reminder.retryCount! >= (reminder.maxRetries || 3)) {
-        reminder.status = ReminderStatus.FAILED;
+      // Update failure tracking but don't change status yet
+      await this.updateFailureTracking(reminder, currentAttempt, errorMessage);
+
+      // Always throw the error so the queue knows the job failed
+      throw error;
+    }
+  }
+
+  private async handleSuccessfulReminder(reminder: any) {
+    reminder.lastExecution = new Date();
+    reminder.executionCount += 1;
+    reminder.successCount += 1;
+    reminder.retryCount = 0;
+    reminder.lastError = null;
+
+    // Handle recurring reminders
+    if (reminder.type === ReminderTypes.RECURRING) {
+      const nextExecution = this.calculateNextExecution(
+        reminder.nextExecution!,
+        reminder.recurrencePattern!,
+        reminder.recurrenceInterval,
+        reminder.timezone,
+        reminder.customCronExpression
+      );
+
+      if (this.shouldContinueRecurrence(reminder, nextExecution)) {
+        reminder.nextExecution = nextExecution;
+        reminder.status = ReminderStatus.PENDING;
+      } else {
+        reminder.status = ReminderStatus.COMPLETED;
         reminder.isActive = false;
       }
-
-      await reminder.save();
+    } else {
+      // One-time reminder completed successfully
+      reminder.status = ReminderStatus.SENT;
+      reminder.isActive = false;
     }
+
+    await reminder.save();
+  }
+
+  private async updateFailureTracking(
+    reminder: any,
+    currentAttempt: number,
+    errorMessage: string
+  ) {
+    reminder.lastExecution = new Date();
+    reminder.executionCount += 1;
+    reminder.failureCount += 1;
+    reminder.lastError = errorMessage;
+
+    // Only update final status if this is the last attempt
+    const maxRetries = reminder.maxRetries || 3;
+    if (currentAttempt >= maxRetries) {
+      reminder.status = ReminderStatus.FAILED;
+      reminder.isActive = false;
+      reminder.retryCount = currentAttempt;
+    }
+
+    await reminder.save();
   }
 
   private async sendEmailReminder(reminder: IReminder): Promise<boolean> {
@@ -996,14 +1032,15 @@ export class EnhancedReminderService {
 
           let result: ISmsResult<any> | null = null;
 
-          result = await this.smsService.send({
+          result = await this.smsService.sendWithoutRetry({
             to: phone,
             body,
             locals: updatedData,
           });
 
           if (!result.success) {
-            logger.error("SMS send failed:", result.error);
+            logger.error("SMS send failed");
+            logJsonError(result.error);
             hasFailures = true;
             continue;
           }
@@ -1019,7 +1056,7 @@ export class EnhancedReminderService {
         }
       }
 
-      return true;
+      return !hasFailures;
     } catch (error) {
       logger.error("SMS reminder failed:", error);
       return false;
