@@ -57,8 +57,8 @@ export class ReminderController {
       category: body.category,
       email: body.email || undefined,
       phone: body.phone || undefined,
-      emails: body.emails || (body.email ? [body.email] : undefined),
-      phones: body.phones || (body.phone ? [body.phone] : undefined),
+      emails: body.emails || undefined,
+      phones: body.phones || undefined,
       isBulk: body.isBulk,
       template: body.template,
       templateId: Boolean(body.templateId) ? body.templateId : undefined,
@@ -116,8 +116,8 @@ export class ReminderController {
           email: body.email || undefined,
           phone: body.phone || undefined,
           remindAt: new Date(body.remindAt),
-          emails: body.emails || (body.email ? [body.email] : undefined),
-          phones: body.phones || (body.phone ? [body.phone] : undefined),
+          emails: body.emails || undefined,
+          phones: body.phones || undefined,
           isBulk: body.isBulk,
           template: body.template,
           templateId: Boolean(body.templateId) ? body.templateId : undefined,
@@ -147,8 +147,8 @@ export class ReminderController {
           maxExecutions: body.maxExecutions,
           email: body.email || undefined,
           phone: body.phone || undefined,
-          emails: body.emails || (body.email ? [body.email] : undefined),
-          phones: body.phones || (body.phone ? [body.phone] : undefined),
+          emails: body.emails || undefined,
+          phones: body.phones || undefined,
           isBulk: body.isBulk,
           template: body.template,
           templateId: Boolean(body.templateId) ? body.templateId : undefined,
@@ -181,8 +181,8 @@ export class ReminderController {
           triggerOffset: body.triggerOffset,
           email: body.email || undefined,
           phone: body.phone || undefined,
-          emails: body.emails || (body.email ? [body.email] : undefined),
-          phones: body.phones || (body.phone ? [body.phone] : undefined),
+          emails: body.emails || undefined,
+          phones: body.phones || undefined,
           isBulk: body.isBulk,
           template: body.template,
           templateId: Boolean(body.templateId) ? body.templateId : undefined,
@@ -212,14 +212,14 @@ export class ReminderController {
   ) => {
     const { body, authData, params } = req;
 
-    const data = await this.reminderService.updateReminder(
+    const reminder = await this.reminderService.updateReminder(
       authData.userId,
       params.id,
       body
     );
 
     return sendSuccessResponse(res, {
-      ...data,
+      reminder,
       message: "Reminder updated successfully",
     });
   };
