@@ -105,8 +105,12 @@ export class CalendarService {
 
     return `
         <script>
-            window.opener.postMessage({provider: 'google-calendar', success: true}, '*');
-            window.close()
+           if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({provider: 'google-calendar', success: true}, '*');
+                window.close();
+            } else {
+                window.close();
+            }
         </script>
         `;
   }

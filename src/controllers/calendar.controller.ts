@@ -32,17 +32,26 @@ export class CalendarController {
   connectGoogleCallback = async (req: Request, res: Response) => {
     const { state: userId, code } = req.query;
     if (!userId || !code) {
-      res.send(
-        `  <script>
-            window.opener.postMessage({provider: 'google-calendar', success: false}, '*');
-            window.close()
-        </script>`
+      res.setHeader(
+        "Content-Security-Policy",
+        "script-src 'self' 'unsafe-inline'"
       );
+      res.send(`
+        <script>
+            window.opener.postMessage({provider: 'google-calendar', success: false}, '*');
+            window.close();
+        </script>
+    `);
+
       return;
     }
     const data = await this.calendarService.connectGoogleCallback(
       userId.toString(),
       code.toString()
+    );
+    res.setHeader(
+      "Content-Security-Policy",
+      "script-src 'self' 'unsafe-inline'"
     );
     res.send(data);
   };
