@@ -1,4 +1,10 @@
-import { TicketRoleEnum, TicketStatus, TTL } from "@/enums";
+import {
+  TicketPriority,
+  TicketRoleEnum,
+  TicketStatus,
+  TTL,
+  UserTypes,
+} from "@/enums";
 import {
   isUser,
   throwNotFoundError,
@@ -27,6 +33,38 @@ export class TicketService {
       this.instance = new TicketService();
     }
     return this.instance;
+  }
+
+  async analytics(auth: AuthData) {
+    let query: Record<string, any> = {};
+    if (auth.userType === UserTypes.USER) {
+      query = { businessId: new Types.ObjectId(auth.userId) };
+    }
+
+    const result = await Promise.allSettled([
+      this.ticketModel
+        .countDocuments({ status: TicketStatus.OPEN, ...query })
+        .exec(),
+      this.ticketModel
+        .countDocuments({ status: TicketStatus.IN_PROGRESS, ...query })
+        .exec(),
+      this.ticketModel
+        .countDocuments({ status: TicketStatus.RESOLVED, ...query })
+        .exec(),
+      this.ticketModel
+        .countDocuments({ status: TicketStatus.CLOSED, ...query })
+        .exec(),
+    ]);
+
+    return {
+      data: {
+        openTickets: result[0].status === "fulfilled" ? result[0].value : 0,
+        inProgressTickets:
+          result[1].status === "fulfilled" ? result[1].value : 0,
+        resolvedTickets: result[2].status === "fulfilled" ? result[2].value : 0,
+        closedTickets: result[3].status === "fulfilled" ? result[3].value : 0,
+      },
+    };
   }
 
   async openOrUpdateTicket({
@@ -90,6 +128,58 @@ export class TicketService {
     return { ticket, message: "Ticket closed successfully" };
   }
 
+  async updateTicketStatus(
+    authData: AuthData,
+    ticketId: string,
+    status: TicketStatus
+  ) {
+    const queryObj: Record<string, any> = {
+      _id: new Types.ObjectId(ticketId),
+    };
+
+    if (isUser(authData))
+      queryObj["businessId"] = new Types.ObjectId(authData.userId);
+
+    const ticket = await this.ticketModel.findOneAndUpdate(
+      queryObj,
+      {
+        status,
+        closedBy: new Types.ObjectId(authData.userId),
+        closedOn: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!ticket) return throwNotFoundError("Ticket not found");
+
+    return { ticket, message: "Ticket updated successfully" };
+  }
+
+  async updateTicketPriority(
+    authData: AuthData,
+    ticketId: string,
+    priority: TicketPriority
+  ) {
+    const queryObj: Record<string, any> = {
+      _id: new Types.ObjectId(ticketId),
+    };
+
+    if (isUser(authData))
+      queryObj["businessId"] = new Types.ObjectId(authData.userId);
+
+    const ticket = await this.ticketModel.findOneAndUpdate(
+      queryObj,
+      {
+        priority,
+      },
+      { new: true }
+    );
+
+    if (!ticket) return throwNotFoundError("Ticket not found");
+
+    return { ticket, message: "Ticket updated successfully" };
+  }
+
   async getTicket(authData: AuthData, id: string) {
     const ticket = await this.ticketModel.findOne({
       _id: new Types.ObjectId(id),
@@ -99,7 +189,7 @@ export class TicketService {
     return { ticket, message: "Ticket found successfully" };
   }
 
-  async getTickets(authData: AuthData, query: any) {
+  async getTickets(authData: AuthData, query?: any) {
     const queryObj: Record<string, any> = {};
 
     if (isUser(authData))
@@ -127,6 +217,30 @@ export class TicketService {
       queryObj,
       {
         $push: { messages: { role: TicketRoleEnum.SUPPORT, content: message } },
+      },
+      { new: true }
+    );
+
+    if (!ticket) return throwNotFoundError("Ticket not found");
+
+    return { ticket, message: "Ticket updated successfully" };
+  }
+
+  async getCustomerTicket(ticketId: string) {
+    const ticket = await this.ticketModel.findOne({
+      _id: new Types.ObjectId(ticketId),
+    });
+    if (!ticket) return throwNotFoundError("Ticket not found");
+    return { ticket, message: "Ticket found successfully" };
+  }
+
+  async customerReplyTicket(ticketId: string, message: string) {
+    const ticket = await this.ticketModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(ticketId),
+      },
+      {
+        $push: { messages: { role: TicketRoleEnum.USER, content: message } },
       },
       { new: true }
     );
