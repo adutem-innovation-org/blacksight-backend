@@ -1,6 +1,6 @@
 import { Model, model, Schema, Types } from "mongoose";
 import { Document } from "mongoose";
-import { TicketRoleEnum, TicketStatus } from "@/enums";
+import { TicketPriority, TicketRoleEnum, TicketStatus } from "@/enums";
 import mongooseLeanVirtuals from "mongoose-lean-virtuals";
 
 export interface ITicketMessage {
@@ -42,6 +42,7 @@ export interface ITicket extends Document<Types.ObjectId> {
   customerName: string;
   messages: ITicketMessage[];
   status: TicketStatus;
+  priority: TicketPriority;
   closedBy: Types.ObjectId;
   closedOn: Date;
   createdAt: Date;
@@ -83,6 +84,15 @@ const TicketSchema: Schema<ITicket> = new Schema<ITicket>(
       },
       default: TicketStatus.OPEN,
       required: [true, "Ticket status is required"],
+    },
+    priority: {
+      type: String,
+      enum: {
+        values: Object.values(TicketPriority),
+        message: "Unsupported ticket priority {PRIORITY}",
+      },
+      default: TicketPriority.LOW,
+      required: [true, "Ticket priority is required"],
     },
     closedBy: {
       type: Schema.Types.ObjectId,
