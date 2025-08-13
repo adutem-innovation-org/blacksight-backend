@@ -2,7 +2,11 @@ import { sendSuccessResponse } from "@/helpers";
 import { GenericReq } from "@/interfaces";
 import { TicketService } from "@/services";
 import { Request, Response } from "express";
-import { UpdateTicketPriorityDto, UpdateTicketStatusDto } from "@/decorators";
+import {
+  ReplyTicketDto,
+  UpdateTicketPriorityDto,
+  UpdateTicketStatusDto,
+} from "@/decorators";
 import { TicketPriority } from "@/enums";
 
 export class TicketController {
@@ -83,6 +87,15 @@ export class TicketController {
     const data = await this.ticketService.deleteTicket(
       req.authData!,
       req.params.id
+    );
+    return sendSuccessResponse(res, data);
+  };
+
+  replyTicket = async (req: GenericReq<ReplyTicketDto>, res: Response) => {
+    const data = await this.ticketService.replyTicket(
+      req.authData!,
+      req.params.id,
+      req.body.message
     );
     return sendSuccessResponse(res, data);
   };
