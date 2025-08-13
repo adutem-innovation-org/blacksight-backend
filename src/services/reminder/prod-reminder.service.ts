@@ -1181,11 +1181,24 @@ export class EnhancedReminderService {
     return reminder;
   }
 
-  async cancelReminder(reminderId: string) {
-    await this.reminderModel.findByIdAndUpdate(reminderId, {
-      status: ReminderStatus.CANCELLED,
-      isActive: false,
-    });
+  async cancelReminder(userId: string, reminderId: string) {
+    const reminder = await this.reminderModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(reminderId),
+        userId: new Types.ObjectId(userId),
+      },
+      {
+        status: ReminderStatus.CANCELLED,
+        isActive: false,
+      },
+      { new: true }
+    );
+
+    if (!reminder) {
+      throwNotFoundError("Reminder not found");
+    }
+
+    return { reminder, message: "Reminder cancelled successfully" };
   }
 
   // Cleanup methods

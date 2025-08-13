@@ -288,12 +288,12 @@ export class ReminderController {
   cancelReminder = async (req: Request, res: Response) => {
     const { authData, params } = req;
 
-    await this.reminderService.cancelReminder(params.id);
+    const data = await this.reminderService.cancelReminder(
+      authData.userId,
+      params.id
+    );
 
-    return sendSuccessResponse(res, {
-      message: "Reminder cancelled successfully",
-      reminderId: params.id,
-    });
+    return sendSuccessResponse(res, data);
   };
 
   // Delete reminder (hard delete)
