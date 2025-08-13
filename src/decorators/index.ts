@@ -9,3 +9,4 @@ export * from "./templates";
 export * from "./agent";
 export * from "./product-recommendation";
 export * from "./payment-tracker";
+export * from "./ticket";
