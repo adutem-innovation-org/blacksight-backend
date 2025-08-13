@@ -231,6 +231,23 @@ export class UpdateReminderDto {
   readonly channel?: ReminderChannels;
 
   @IsOptional()
+  @IsEnum(ReminderCategory, {
+    message: "Unsupported reminder category",
+  })
+  readonly category?: ReminderCategory;
+
+  @IsOptional()
+  @IsEnum(ReminderTypes, {
+    message: "Unsupported reminder type",
+  })
+  readonly type?: ReminderTypes;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isBulk?: boolean;
+
+  @IsOptional()
   @IsEmail({}, { message: "Email must be a valid email address" })
   readonly email?: string;
 
@@ -302,6 +319,13 @@ export class UpdateReminderDto {
   @IsOptional()
   @IsString({ message: "Template must be of type string" })
   readonly template?: string;
+
+  @IsOptional()
+  @ValidateIf((o) => o.templateId !== "" && o.templateId !== undefined)
+  @IsMongoId({
+    message: "Template identifier must be a valid",
+  })
+  readonly templateId?: string;
 
   @IsOptional()
   readonly templateData?: Record<string, any>;
