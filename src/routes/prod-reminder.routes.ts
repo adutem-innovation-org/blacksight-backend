@@ -58,7 +58,7 @@ reminderRouter.post(
 );
 
 // Update reminder
-reminderRouter.put(
+reminderRouter.patch(
   "/update/:id",
   rateLimiter({ limit: 30, ttl: 5 * 60 * 1000 }), // 30 requests per 5 minutes
   permissionRequirement([UserTypes.USER]),

@@ -389,6 +389,10 @@ export class EnhancedReminderService {
       message: string;
       subject: string;
       channel: ReminderChannels;
+      cateory: ReminderCategory;
+      type: ReminderTypes;
+      email: string;
+      phone: string;
       emails: string[];
       phones: string[];
       remindAt: Date;
@@ -496,7 +500,7 @@ export class EnhancedReminderService {
       );
     }
 
-    Object.assign(reminder, updateData);
+    reminder.set(updateData);
     await reminder.save();
 
     return reminder;
