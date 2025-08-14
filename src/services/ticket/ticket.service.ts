@@ -217,6 +217,7 @@ export class TicketService {
       queryObj,
       {
         $push: { messages: { role: TicketRoleEnum.SUPPORT, content: message } },
+        status: TicketStatus.IN_PROGRESS,
       },
       { new: true }
     );
