@@ -28,10 +28,10 @@ appointmentRouter.patch(
   appointmentController.updateAppointmentStatus
 );
 
-appointmentRouter
-  .route("/:id")
-  .get(appointmentController.getAppointment)
-  .delete(
-    permissionRequirement([UserTypes.USER]),
-    appointmentController.deleteAppointment
-  );
+appointmentRouter.route("/:id").get(appointmentController.getAppointment);
+
+appointmentRouter.delete(
+  "/delete/:id",
+  permissionRequirement([UserTypes.USER, UserTypes.ADMIN]),
+  appointmentController.deleteAppointment
+);

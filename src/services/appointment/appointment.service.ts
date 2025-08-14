@@ -12,8 +12,20 @@ import {
   throwUnprocessableEntityError,
 } from "@/helpers";
 import { AuthData, ScheduleAppointmentBody } from "@/interfaces";
-import { Appointment, IAppointment } from "@/models";
-import { CacheService, eventEmitter, PaginationService } from "@/utils";
+import {
+  Appointment,
+  Business,
+  IAppointment,
+  IBusiness,
+  IUser,
+  User,
+} from "@/models";
+import {
+  CacheService,
+  eventEmitter,
+  MailgunEmailService,
+  PaginationService,
+} from "@/utils";
 import { Model, Types } from "mongoose";
 import {
   startOfDay,
@@ -35,12 +47,17 @@ export class AppointmentService {
   private readonly eventEmitter: EventEmitter2 = eventEmitter;
   private readonly logger: Logger = logger;
 
+  private readonly businessModel: Model<IBusiness> = Business;
+  private readonly userModel: Model<IUser> = User;
+
   private readonly appointmentModel: Model<IAppointment> = Appointment;
   private readonly paginationService: PaginationService<IAppointment>;
+  private readonly emailService: MailgunEmailService;
   private readonly cacheService: CacheService;
 
   constructor() {
     this.paginationService = new PaginationService(this.appointmentModel);
+    this.emailService = MailgunEmailService.getInstance();
     this.cacheService = CacheService.getInstance();
     BookingEventService.getInstance();
     this._setupEventListeners();
@@ -365,7 +382,11 @@ export class AppointmentService {
     );
   }
 
-  async updateStatus(auth: AuthData, id: string, status: AppointmentStatus) {
+  async updateStatus(
+    auth: AuthData,
+    id: string,
+    { status, reason }: { status: AppointmentStatus; reason?: string }
+  ) {
     const appointment = await this.appointmentModel.findOneAndUpdate(
       {
         businessId: new Types.ObjectId(auth.userId),
@@ -376,6 +397,46 @@ export class AppointmentService {
     );
 
     if (!appointment) return throwNotFoundError("Appoinment not found");
+
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      try {
+        let owner = await this.userModel.findById(auth.userId);
+
+        if (owner) {
+          const businessInfo = await this.businessModel.findOne({
+            businessId: owner.businessId,
+          });
+
+          const {
+            appointmentDateInCustomerTimezone,
+            appointmentTimeInCustomerTimezone,
+            duration,
+            timezone,
+            _id,
+          } = appointment;
+          this.emailService.send({
+            message: {
+              to: appointment.customerEmail,
+              subject: "Your appointment has been cancelled",
+              text: `Your appointment has been successfully removed form system. This is because; ${reason}.`,
+            },
+            template: "booking-cancelled",
+            locals: {
+              appointmentDateInCustomerTimezone,
+              appointmentTimeInCustomerTimezone,
+              duration: duration ?? 30,
+              timezone: timezone,
+              appointmentId: _id,
+              cancellationReason: reason,
+              business: {
+                contactEmail: businessInfo?.contactEmail ?? owner.email,
+                contactTel: businessInfo?.contactTel ?? owner.phone,
+              },
+            },
+          });
+        }
+      } catch (error) {}
+    }
 
     return { appointment, message: "Appointment updated successfully" };
   }

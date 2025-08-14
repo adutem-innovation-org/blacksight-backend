@@ -40,7 +40,7 @@ export class AppointmentController {
     const data = await this.appointmentService.updateStatus(
       req.authData!,
       req.params.id,
-      req.body.status
+      req.body
     );
     return sendSuccessResponse(res, data);
   };
