@@ -12,13 +12,14 @@ import {
 } from "@/helpers";
 import { AuthData } from "@/interfaces";
 import { ITicket, Ticket } from "@/models";
-import { CacheService, PaginationService } from "@/utils";
+import { CacheService, MailgunEmailService, PaginationService } from "@/utils";
 import { Model, Types } from "mongoose";
 
 export class TicketService {
   private static instance: TicketService;
 
   private readonly ticketModel: Model<ITicket> = Ticket;
+  private readonly emailService: MailgunEmailService;
 
   private readonly cacheService: CacheService;
   private readonly paginationService: PaginationService<ITicket>;
@@ -26,6 +27,7 @@ export class TicketService {
   constructor() {
     this.cacheService = CacheService.getInstance();
     this.paginationService = new PaginationService(this.ticketModel);
+    this.emailService = MailgunEmailService.getInstance();
   }
 
   static getInstance(): TicketService {
@@ -90,6 +92,15 @@ export class TicketService {
       content: message,
     };
 
+    const alreadyExist = await this.ticketModel.exists({
+      sessionId,
+      botId,
+      businessId,
+      status: {
+        $in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS],
+      },
+    });
+
     const ticket = await this.ticketModel.findOneAndUpdate(
       {
         sessionId,
@@ -107,6 +118,40 @@ export class TicketService {
     if (ticket) {
       ticket.messages.push(newTicketMessage);
       await ticket.save();
+    }
+
+    if (!alreadyExist) {
+      if (ticket.customerEmail) {
+        try {
+          await this.emailService.send({
+            message: {
+              text: `Hi ${ticket.customerName.split(" ")[0] || "there"}!👋,
+          \n\nWe have received your message.
+          \n\nWe will write back to you shorty
+          \n\nThis email will contain more details in the future.
+          \n\nYour ticket ID is: ${ticket._id}`,
+              to: ticket.customerEmail,
+              subject: `Reply to your ticket. #${ticket._id}`,
+            },
+            template: "ticket-creation",
+            locals: {
+              customerName: ticket.customerName.split(" ")[0] || "there",
+              customerEmail: ticket.customerEmail,
+              ticketId: ticket._id,
+              subject: `Reply to your ticket. #${ticket._id}`,
+              message,
+              timestamp: new Date().toLocaleString("en-US", {
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+                hour: "numeric",
+                minute: "numeric",
+                hour12: true,
+              }),
+            },
+          });
+        } catch (error) {}
+      }
     }
 
     return ticket;
@@ -217,12 +262,38 @@ export class TicketService {
       queryObj,
       {
         $push: { messages: { role: TicketRoleEnum.SUPPORT, content: message } },
-        status: TicketStatus.IN_PROGRESS,
       },
       { new: true }
     );
 
     if (!ticket) return throwNotFoundError("Ticket not found");
+
+    if (ticket.status !== TicketStatus.RESOLVED)
+      ticket.status = TicketStatus.IN_PROGRESS;
+    await ticket.save();
+
+    if (ticket.customerEmail) {
+      try {
+        await this.emailService.send({
+          message: {
+            text: `Hi ${ticket.customerName.split(" ")[0] || "there"}!👋,
+          \n\nThere is an update on your ticket.
+          \n\nThis email will contain more details in the future.
+          \n\nReply from support: ${message}
+          \n\nYour ticket ID is: ${ticket._id}`,
+            to: ticket.customerEmail,
+            subject: `Reply to your ticket. #${ticket._id}`,
+          },
+          template: "ticket-reply",
+          locals: {
+            customerName: ticket.customerName.split(" ")[0] || "there",
+            customerEmail: ticket.customerEmail,
+            ticketId: ticket._id,
+            message,
+          },
+        });
+      } catch (error) {}
+    }
 
     return { ticket, message: "Ticket updated successfully" };
   }
