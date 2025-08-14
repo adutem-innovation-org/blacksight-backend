@@ -195,9 +195,9 @@ export class TicketService {
     if (isUser(authData))
       queryObj["businessId"] = new Types.ObjectId(authData.userId);
 
-    if (query.status) queryObj["status"] = query.status;
+    if (query?.status) queryObj["status"] = query.status;
 
-    if (query.customerEmail) queryObj["customerEmail"] = query.customerEmail;
+    if (query?.customerEmail) queryObj["customerEmail"] = query.customerEmail;
 
     return await this.paginationService.paginate(
       { query: queryObj, populate: ["bot"], sort: { createdAt: -1 } },
