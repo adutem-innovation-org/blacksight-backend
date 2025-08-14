@@ -60,66 +60,70 @@
             Your Request Details
           </h3>
 
-          <div
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;"
+          <!-- Table Layout for Request Details -->
+          <table
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            style="margin-bottom: 20px;"
           >
-            <div>
-              <p
-                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
-              >
-                Preferred Date
-              </p>
-              <p
-                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
-              >
-                {{appointmentDateInCustomerTimezone}}
-              </p>
-            </div>
+            <tr>
+              <td width="50%" style="padding-right: 15px; vertical-align: top;">
+                <p
+                  style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+                >
+                  Preferred Date
+                </p>
+                <p
+                  style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+                >
+                  {{appointmentDateInCustomerTimezone}}
+                </p>
+              </td>
+              <td width="50%" style="padding-left: 15px; vertical-align: top;">
+                <p
+                  style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+                >
+                  Preferred Time
+                </p>
+                <p
+                  style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+                >
+                  {{appointmentTimeInCustomerTimezone}}
+                </p>
+              </td>
+            </tr>
+          </table>
 
-            <div>
-              <p
-                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
-              >
-                Preferred Time
-              </p>
-              <p
-                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
-              >
-                {{appointmentTimeInCustomerTimezone}}
-              </p>
-            </div>
-          </div>
-
-          <div
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;"
-          >
-            <div>
-              <p
-                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
-              >
-                Duration
-              </p>
-              <p
-                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
-              >
-                {{duration}}
-                minutes
-              </p>
-            </div>
-
-            <div>
-              <p
-                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
-              >
-                Timezone
-              </p>
-              <p
-                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
-              >
-                {{timezone}}
-              </p>
-            </div>
-          </div>
+          <table width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td width="50%" style="padding-right: 15px; vertical-align: top;">
+                <p
+                  style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+                >
+                  Duration
+                </p>
+                <p
+                  style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+                >
+                  {{duration}}
+                  minutes
+                </p>
+              </td>
+              <td width="50%" style="padding-left: 15px; vertical-align: top;">
+                <p
+                  style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+                >
+                  Timezone
+                </p>
+                <p
+                  style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+                >
+                  {{timezone}}
+                </p>
+              </td>
+            </tr>
+          </table>
 
         </div>
 
