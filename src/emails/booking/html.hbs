@@ -1,0 +1,293 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Appointment Request Received - Blacksight</title>
+  </head>
+  <body
+    style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9;"
+  >
+
+    <!-- Email Container -->
+    <div style="max-width: 640px; margin: 0 auto; background-color: #f9f9f9;">
+
+      <!-- Header -->
+      <div style="text-align: center; padding: 40px 0;">
+        <a href="https://blacksight.co">
+          <img
+            src="https://firebasestorage.googleapis.com/v0/b/philipthedeveloper-p.appspot.com/o/blacksight%2Fblacksight_logo_side.png?alt=media&token=fad01d82-762b-4d89-88f6-b7d3c2e1d912"
+            alt="Blacksight Logo"
+            style="height: 38px; width: 138px;"
+          />
+        </a>
+      </div>
+
+      <!-- Main Content -->
+      <div
+        style="background-color: #ffffff; border-radius: 4px; margin: 0 20px; padding: 40px 50px;"
+      >
+
+        <!-- Success Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div
+            style="display: inline-block; background-color: #d1ecf1; color: #0c5460; border-radius: 50%; width: 60px; height: 60px; line-height: 60px; font-size: 24px;"
+          >
+            📋
+          </div>
+        </div>
+
+        <h2
+          style="color: #4f545c; font-size: 24px; font-weight: 600; margin: 0 0 10px 0; text-align: center;"
+        >
+          Appointment Request Received!
+        </h2>
+
+        <p
+          style="color: #737f8d; font-size: 16px; line-height: 24px; margin: 0 0 30px 0; text-align: center;"
+        >
+          Hi
+          {{customerName}}, we've received your appointment request and are
+          processing it now.
+        </p>
+
+        <!-- Request Details Card -->
+        <div
+          style="background-color: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 25px; margin: 25px 0;"
+        >
+          <h3
+            style="color: #4f545c; font-size: 18px; font-weight: 600; margin: 0 0 20px 0; text-align: center; border-bottom: 1px solid #dee2e6; padding-bottom: 15px;"
+          >
+            Your Request Details
+          </h3>
+
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;"
+          >
+            <div>
+              <p
+                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+              >
+                Preferred Date
+              </p>
+              <p
+                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+              >
+                {{appointmentDateInCustomerTimezone}}
+              </p>
+            </div>
+
+            <div>
+              <p
+                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+              >
+                Preferred Time
+              </p>
+              <p
+                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+              >
+                {{appointmentTimeInCustomerTimezone}}
+              </p>
+            </div>
+          </div>
+
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;"
+          >
+            <div>
+              <p
+                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+              >
+                Duration
+              </p>
+              <p
+                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+              >
+                {{duration}}
+                minutes
+              </p>
+            </div>
+
+            <div>
+              <p
+                style="color: #6c757d; font-size: 13px; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 0.5px;"
+              >
+                Timezone
+              </p>
+              <p
+                style="color: #4f545c; font-size: 16px; font-weight: 600; margin: 0;"
+              >
+                {{timezone}}
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- What Happens Next -->
+        <div
+          style="background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px; padding: 20px; margin: 25px 0;"
+        >
+          <div style="display: flex; align-items: flex-start;">
+            <div
+              style="color: #0c5460; font-size: 18px; margin-right: 10px; margin-top: 2px;"
+            >⏳</div>
+            <div>
+              <h3
+                style="color: #0c5460; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;"
+              >
+                What Happens Next?
+              </h3>
+              <p
+                style="color: #0c5460; font-size: 14px; line-height: 20px; margin: 0;"
+              >
+                We're currently checking availability and will send you a
+                follow-up email within the next
+                <strong>24 hours</strong>
+                with either a confirmation or alternative time slots if your
+                preferred time isn't available.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Contact Information -->
+        {{#if business.contactEmail}}
+          <div
+            style="background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 6px; padding: 20px; margin: 25px 0;"
+          >
+            <h3
+              style="color: #0066cc; font-size: 16px; font-weight: 600; margin: 0 0 15px 0;"
+            >
+              Contact Information
+            </h3>
+            {{#if business.contactEmail}}
+              <p
+                style="color: #004499; font-size: 14px; line-height: 20px; margin: 5px 0;"
+              >
+                <strong>Email:</strong>
+                <a
+                  href="mailto:{{business.contactEmail}}"
+                  style="color: #0066cc; text-decoration: none;"
+                >{{business.contactEmail}}</a>
+              </p>
+            {{/if}}
+            {{#if business.contactTel}}
+              <p
+                style="color: #004499; font-size: 14px; line-height: 20px; margin: 5px 0;"
+              >
+                <strong>Phone:</strong>
+                <a
+                  href="tel:{{business.contactTel}}"
+                  style="color: #0066cc; text-decoration: none;"
+                >{{business.contactTel}}</a>
+              </p>
+            {{/if}}
+          </div>
+        {{/if}}
+
+        <!-- Action Button -->
+        <div style="text-align: center; margin: 30px 0;">
+          <a
+            href="https://app.blacksight.co/appointments/{{appointmentId}}"
+            style="background-color: #5865f2; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-size: 16px; font-weight: 600; display: inline-block;"
+          >
+            View Request Status
+          </a>
+        </div>
+
+        <!-- Important Notice -->
+        <div
+          style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 20px; margin: 25px 0;"
+        >
+          <div style="display: flex; align-items: flex-start;">
+            <div
+              style="color: #856404; font-size: 18px; margin-right: 10px; margin-top: 2px;"
+            >💡</div>
+            <div>
+              <h3
+                style="color: #856404; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;"
+              >
+                Please Note
+              </h3>
+              <ul
+                style="color: #856404; font-size: 14px; line-height: 20px; margin: 0; padding-left: 20px;"
+              >
+                <li>Your appointment is
+                  <strong>not yet confirmed</strong>
+                  - we're checking availability first</li>
+                <li>You'll receive a confirmation email once we've secured your
+                  time slot</li>
+                <li>If your preferred time isn't available, we'll provide
+                  alternative options</li>
+                <li>Keep an eye on your email for updates within the next 24
+                  hours</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Request ID -->
+        <div style="text-align: center; margin: 25px 0;">
+          <p style="color: #737f8d; font-size: 14px; margin: 0 0 10px 0;">
+            Your request reference number:
+          </p>
+          <div
+            style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px 15px; display: inline-block; font-family: 'Courier New', monospace; font-weight: 600; color: #4f545c;"
+          >
+            REQ-{{appointmentId}}
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <hr
+          style="border: none; border-top: 1px solid #dcddde; margin: 30px 0;"
+        />
+
+        <!-- Footer -->
+        <div style="color: #747f8d; font-size: 13px; line-height: 16px;">
+          <p style="margin: 0;">
+            Questions about your appointment request?
+            <a
+              href="https://blacksight.co/contact"
+              style="color: #5865f2; text-decoration: none;"
+            >Contact our support team</a>
+            or visit our
+            <a
+              href="https://blacksight.co/help"
+              style="color: #5865f2; text-decoration: none;"
+            >help center</a>.<br />
+            You can also reach us on X
+            <a
+              href="https://blacksight.co/"
+              style="color: #5865f2; text-decoration: none;"
+            >@blacksight</a>.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Bottom Footer -->
+      <div
+        style="text-align: center; padding: 20px; color: #99aab5; font-size: 12px; line-line: 24px;"
+      >
+        <p style="margin: 0 0 5px 0;">
+          Sent by BlackSight •
+          <a
+            href="https://blacksight.co/contact"
+            style="color: #1eb0f4; text-decoration: none;"
+          >Learn about us</a>
+          •
+          <a
+            href="https://blacksight.co/contact"
+            style="color: #1eb0f4; text-decoration: none;"
+          >@blacksight</a>
+        </p>
+        <p style="margin: 0;">
+          444 De Haro Street, Suite 200, San Francisco, CA 94107
+        </p>
+      </div>
+
+    </div>
+
+  </body>
+</html>

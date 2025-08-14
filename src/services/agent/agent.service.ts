@@ -1,12 +1,20 @@
 import { throwNotFoundError, throwUnprocessableEntityError } from "@/helpers";
 import { AuthData } from "@/interfaces";
-import { Bot, IBot, IConversation } from "@/models";
+import {
+  Bot,
+  Business,
+  IBot,
+  IBusiness,
+  IConversation,
+  IUser,
+  User,
+} from "@/models";
 import { Model } from "mongoose";
 import { BotService, ConversationService } from "../bot";
 import { AppointmentStatus, RoleEnum, UserActions } from "@/enums";
-import { AudioConverter, CacheService } from "@/utils";
+import { AudioConverter, CacheService, MailgunEmailService } from "@/utils";
 import { Types } from "mongoose";
-import fs from "fs";
+import fs, { Mode } from "fs";
 import path from "path";
 import { config } from "@/config";
 import OpenAI from "openai";
@@ -19,11 +27,14 @@ export class AgentService {
   private static instance: AgentService;
 
   private readonly agentModel: Model<IBot> = Bot;
+  private readonly businessModel: Model<IBusiness> = Business;
+  private readonly userModel: Model<IUser> = User;
 
   private readonly botService: BotService;
   private readonly conversationService: ConversationService;
   private readonly cacheService: CacheService;
   private readonly appointmentService: AppointmentService;
+  private readonly emailService: MailgunEmailService;
   private readonly ticketService: TicketService;
   private readonly openai: OpenAI;
 
@@ -32,6 +43,7 @@ export class AgentService {
     this.conversationService = ConversationService.getInstance();
     this.cacheService = CacheService.getInstance();
     this.appointmentService = AppointmentService.getInstance();
+    this.emailService = MailgunEmailService.getInstance();
     this.ticketService = TicketService.getInstance();
     this.openai = new OpenAI({ apiKey: config.openai.apiKey });
   }
@@ -203,6 +215,35 @@ export class AgentService {
     };
 
     let result = await this.appointmentService.bookAppointment(appointmentData);
+
+    try {
+      let owner = await this.userModel.findById(authData.userId);
+
+      if (owner) {
+        const businessInfo = await this.businessModel.findOne({
+          businessId: owner.businessId,
+        });
+
+        await this.emailService.send({
+          message: {
+            to: result.customerEmail,
+            subject: "Your appointment has been scheduled",
+            text: `Your appointment has been scheduled for ${appointmentDateInCustomerTimezone} at ${appointmentTimeInCustomerTimezone} ${data.timezone} time.`,
+          },
+          template: "booking",
+          locals: {
+            appointmentDateInCustomerTimezone,
+            appointmentTimeInCustomerTimezone,
+            duration: result.duration ?? 30,
+            timezone: result.timezone,
+            business: {
+              contactEmail: businessInfo?.contactEmail ?? owner.email,
+              contactPhone: businessInfo?.contactTel ?? owner.phone,
+            },
+          },
+        });
+      }
+    } catch (error) {}
 
     const botResponse = await this.ask(authData, agentId, sessionId, {
       userQuery: `Booked an appointment to be held on ${appointmentDateInCustomerTimezone} at ${appointmentTimeInCustomerTimezone} ${data.timezone} time.`,
