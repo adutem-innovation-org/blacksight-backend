@@ -12,16 +12,23 @@ import { Job, Queue } from "bullmq";
 import Redis from "ioredis";
 import { Model, Types } from "mongoose";
 import {
+  Appointment,
+  Business,
   BusinessCustomerPayment,
   EmailTemplate,
+  IAppointment,
+  IBusiness,
   IBusinessCustomerPayment,
   IEmailTemplate,
   IReminder,
   ISMSTemplate,
+  IUser,
   Reminder,
   SMSTemplate,
+  User,
 } from "@/models";
 import {
+  AppointmentStatus,
   EventTrigger,
   QueueEnums,
   QueueJobs,
@@ -43,10 +50,14 @@ import {
 } from "@/helpers";
 import {
   AuthData,
+  CustomerDataResult,
   PaginationOptions,
   ReminderAnalytics,
+  ReminderContext,
   ReminderFilters,
 } from "@/interfaces";
+import { formatInTimeZone } from "date-fns-tz";
+import { format, formatDistanceToNow } from "date-fns";
 
 export class EnhancedReminderService {
   private static instance: EnhancedReminderService;
@@ -54,7 +65,10 @@ export class EnhancedReminderService {
   private readonly reminderModel: Model<IReminder> = Reminder;
   private readonly emailTemplateModel: Model<IEmailTemplate> = EmailTemplate;
   private readonly smsTemplateModel: Model<ISMSTemplate> = SMSTemplate;
+  private readonly appointmentModel: Model<IAppointment> = Appointment;
 
+  private readonly businessModel: Model<IBusiness> = Business;
+  private readonly userModel: Model<IUser> = User;
   private readonly bcpModel: Model<IBusinessCustomerPayment> =
     BusinessCustomerPayment;
   private readonly smsService: TwilioMessagingService;
@@ -831,7 +845,132 @@ export class EnhancedReminderService {
 
     await reminder.save();
   }
+  /**
+   * Shared logic for fetching customer data and building template data
+   * Works for both email and SMS reminders
+   */
+  private async getCustomerDataAndTemplateData(
+    context: ReminderContext
+  ): Promise<CustomerDataResult> {
+    const { reminder, identifier, identifierType } = context;
 
+    const query: Record<string, any> = {};
+
+    // Build query based on reminder category
+    if (reminder.category === ReminderCategory.PAYMENT) {
+      query[identifierType] = identifier;
+      query["userId"] = new Types.ObjectId(reminder.userId);
+
+      if (reminder?.fileId) {
+        query["fileId"] = new Types.ObjectId(reminder.fileId);
+      }
+    }
+
+    if (reminder.category === ReminderCategory.APPOINTMENT) {
+      query[
+        `customer${identifierType
+          .charAt(0)
+          .toUpperCase()}${identifierType.slice(1)}`
+      ] = identifier;
+      query["businessId"] = new Types.ObjectId(reminder.userId);
+      query["status"] = {
+        $in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
+      };
+    }
+
+    // Fetch customer data based on category
+    let customerData: IBusinessCustomerPayment | IAppointment | null = null;
+
+    if (reminder.category === ReminderCategory.APPOINTMENT) {
+      customerData = await this.appointmentModel.findOne(query);
+    } else if (reminder.category === ReminderCategory.PAYMENT) {
+      customerData = await this.bcpModel.findOne(query);
+    }
+
+    if (!customerData) {
+      logger.error(
+        `Customer data not found for ${identifierType} ${identifier}`
+      );
+      return {
+        customerData: null,
+        derivedData: {},
+        updatedData: {},
+      };
+    }
+
+    // Generate derived data based on category
+    let derivedData: Record<string, any> = {};
+
+    if (
+      reminder.category === ReminderCategory.PAYMENT &&
+      customerData instanceof BusinessCustomerPayment
+    ) {
+      derivedData = {
+        customerName: customerData.name.split(" ")[0],
+        customerEmail: customerData.email,
+        customerPhone: customerData?.phone,
+        lastPayment: this.formatDate(customerData.lastPayment),
+        nextPayment: this.formatDate(customerData.nextPayment),
+        paymentInterval: customerData.paymentInterval,
+      };
+    } else if (
+      reminder.category === ReminderCategory.APPOINTMENT &&
+      customerData instanceof Appointment
+    ) {
+      derivedData = {
+        ...customerData.toObject(),
+        timeUntilAppointment: this.getTimeUntilAppointment(
+          customerData.dateTimeInCustomerTimezone
+        ),
+        appointmentId: customerData._id,
+      };
+    }
+
+    // Add business information
+    const owner = await this.userModel.findById(reminder.userId);
+    if (owner) {
+      const businessInfo = await this.businessModel.findOne({
+        businessId: owner.businessId,
+      });
+
+      derivedData["business"] = {
+        contactEmail: businessInfo?.contactEmail ?? owner.email,
+        contactTel: businessInfo?.contactTel ?? owner.phone,
+      };
+    }
+
+    // Merge with template data
+    const updatedData = {
+      ...(reminder.templateData ?? {}),
+      ...derivedData,
+    };
+
+    return { customerData, derivedData, updatedData };
+  }
+
+  /**
+   * Consistent date formatting using date-fns
+   */
+  private formatDate(date: Date | string, timezone?: string): string {
+    const dateObj = new Date(date);
+
+    if (timezone) {
+      return formatInTimeZone(dateObj, timezone, "MMM d, yyyy");
+    }
+
+    return format(dateObj, "MMM d, yyyy");
+  }
+
+  /**
+   * Calculate time until appointment using date-fns
+   */
+  private getTimeUntilAppointment(appointmentDate: Date | string): string {
+    return formatDistanceToNow(new Date(appointmentDate), { addSuffix: true });
+  }
+
+  /**
+   * Your original email reminder method with shared data logic
+   */
   private async sendEmailReminder(reminder: IReminder): Promise<boolean> {
     try {
       const recipients = reminder.isBulk
@@ -839,7 +978,6 @@ export class EnhancedReminderService {
         : [reminder.email!];
 
       // Fetch external templates ONCE before looping if needed
-      // Could use caching in the future
       let template = null;
       if (reminder.templateId) {
         template = await this.emailTemplateModel.findById(reminder.templateId);
@@ -852,52 +990,24 @@ export class EnhancedReminderService {
       }
 
       let hasFailures = false;
+      let failureCount = 0;
 
       for (const email of recipients) {
         try {
-          const query: Record<string, any> = {
-            email,
-            userId: new Types.ObjectId(reminder.userId),
+          const context: ReminderContext = {
+            reminder,
+            identifier: email,
+            identifierType: "email",
           };
 
-          if (
-            reminder?.fileId &&
-            reminder.category === ReminderCategory.PAYMENT
-          ) {
-            query["fileId"] = new Types.ObjectId(reminder.fileId);
-          }
+          const { customerData, updatedData } =
+            await this.getCustomerDataAndTemplateData(context);
 
-          // Fetch email data
-          const customerData = await this.bcpModel.findOne(query);
           if (!customerData) {
-            logger.error(`Customer data not found for email ${email}`);
             hasFailures = true;
+            failureCount++;
             continue;
           }
-
-          let updatedData = {
-            ...(reminder.templateData ?? {}),
-            customerName: customerData.name.split(" ")[0],
-            customerEmail: customerData.email,
-            customerPhone: customerData?.phone,
-            lastPayment: new Date(customerData.lastPayment).toLocaleString(
-              "en-US",
-              {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              }
-            ),
-            nextPayment: new Date(customerData.nextPayment).toLocaleString(
-              "en-US",
-              {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              }
-            ),
-            paymentInterval: customerData.paymentInterval,
-          };
 
           let result: MailResponse | null = null;
 
@@ -930,9 +1040,11 @@ export class EnhancedReminderService {
             });
           }
 
-          if (!result || result.error) {
-            logger.error("Email send failed:", result?.error);
+          if (!result || result?.error) {
+            logger.error("Email send failed");
+            logJsonError(result?.error);
             hasFailures = true;
+            failureCount++;
             continue;
           }
         } catch (emailError: any) {
@@ -944,16 +1056,28 @@ export class EnhancedReminderService {
             )}`
           );
           hasFailures = true;
+          failureCount++;
         }
       }
 
-      return true;
+      let successDecision = true;
+
+      if (hasFailures && !reminder.isBulk) {
+        successDecision = false;
+      } else if (hasFailures && reminder.isBulk) {
+        successDecision = failureCount < Math.round(recipients.length / 2);
+      }
+
+      return successDecision;
     } catch (error) {
       logger.error("Email reminder failed:", error);
       return false;
     }
   }
 
+  /**
+   * Refactored SMS reminder method using shared data logic
+   */
   private async sendSmsReminder(reminder: IReminder): Promise<boolean> {
     try {
       const recipients = reminder.isBulk
@@ -961,7 +1085,6 @@ export class EnhancedReminderService {
         : [reminder.phone!];
 
       // Fetch external templates ONCE before looping if needed
-      // Could use caching in the future
       let template = null;
       if (reminder.templateId) {
         template = await this.smsTemplateModel.findById(reminder.templateId);
@@ -988,53 +1111,24 @@ export class EnhancedReminderService {
       }
 
       let hasFailures = false;
+      let failureCount = 0;
 
       for (const phone of recipients) {
         try {
-          const query: Record<string, any> = {
-            phone,
-            userId: new Types.ObjectId(reminder.userId),
+          const context: ReminderContext = {
+            reminder,
+            identifier: phone,
+            identifierType: "phone",
           };
 
-          if (
-            reminder?.fileId &&
-            reminder.category === ReminderCategory.PAYMENT
-          ) {
-            query["fileId"] = new Types.ObjectId(reminder.fileId);
-          }
-
-          // Fetch email data
-          const customerData = await this.bcpModel.findOne(query);
+          const { customerData, updatedData } =
+            await this.getCustomerDataAndTemplateData(context);
 
           if (!customerData) {
-            logger.error(`Customer data not found for phone ${phone}`);
             hasFailures = true;
+            failureCount++;
             continue;
           }
-
-          let updatedData = {
-            ...(reminder.templateData ?? {}),
-            customerName: customerData.name.split(" ")[0],
-            customerEmail: customerData.email,
-            customerPhone: customerData?.phone ?? phone,
-            lastPayment: new Date(customerData.lastPayment).toLocaleString(
-              "en-US",
-              {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              }
-            ),
-            nextPayment: new Date(customerData.nextPayment).toLocaleString(
-              "en-US",
-              {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              }
-            ),
-            paymentInterval: customerData.paymentInterval,
-          };
 
           let result: ISmsResult<any> | null = null;
 
@@ -1048,6 +1142,7 @@ export class EnhancedReminderService {
             logger.error("SMS send failed");
             logJsonError(result.error);
             hasFailures = true;
+            failureCount++;
             continue;
           }
         } catch (smsError: any) {
@@ -1058,11 +1153,20 @@ export class EnhancedReminderService {
               2
             )}`
           );
+          failureCount++;
           hasFailures = true;
         }
       }
 
-      return !hasFailures;
+      let successDecision = true;
+
+      if (hasFailures && !reminder.isBulk) {
+        successDecision = false;
+      } else if (hasFailures && reminder.isBulk) {
+        successDecision = failureCount < Math.round(recipients.length / 2);
+      }
+
+      return successDecision;
     } catch (error) {
       logger.error("SMS reminder failed:", error);
       return false;

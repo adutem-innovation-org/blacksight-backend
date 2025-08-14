@@ -38,6 +38,15 @@ reminderRouter.post(
   reminderController.sendInstantReminder
 );
 
+// Send instant reminder (higher rate limit due to immediate nature)
+reminderRouter.post(
+  "/instant/appointment",
+  rateLimiter({ limit: 20, ttl: 5 * 60 * 1000 }),
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(SendInstantReminderDto),
+  reminderController.sendInstantReminder
+);
+
 // Create reminder (scheduled, recurring, or event-based)
 reminderRouter.post(
   "/create",
@@ -51,6 +60,15 @@ reminderRouter.post(
 // Create reminder (scheduled, recurring, or event-based)
 reminderRouter.post(
   "/create/bcp",
+  rateLimiter({ limit: 50, ttl: 5 * 60 * 1000 }), // 50 requests per 5 minutes
+  permissionRequirement([UserTypes.USER]),
+  validateDTO(CreateReminderDto),
+  reminderController.createReminder
+);
+
+// Create reminder (scheduled, recurring, or event-based)
+reminderRouter.post(
+  "/create/appointment",
   rateLimiter({ limit: 50, ttl: 5 * 60 * 1000 }), // 50 requests per 5 minutes
   permissionRequirement([UserTypes.USER]),
   validateDTO(CreateReminderDto),

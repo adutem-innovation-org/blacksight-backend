@@ -1,4 +1,5 @@
 import { ReminderChannels, ReminderStatus, ReminderTypes } from "@/enums";
+import { IAppointment, IBusinessCustomerPayment, IReminder } from "@/models";
 
 export interface PaginationOptions {
   page?: number;
@@ -31,4 +32,16 @@ export interface ReminderAnalytics {
     failed: number;
     period: string;
   };
+}
+
+export interface ReminderContext {
+  reminder: IReminder;
+  identifier: string; // email or phone
+  identifierType: "email" | "phone";
+}
+
+export interface CustomerDataResult {
+  customerData: IBusinessCustomerPayment | IAppointment | null;
+  derivedData: Record<string, any>;
+  updatedData: Record<string, any>;
 }
