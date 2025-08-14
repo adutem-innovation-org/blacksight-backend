@@ -437,7 +437,12 @@ export class SendInstantReminderDto {
   readonly templateId?: string;
 
   @IsOptional()
-  @ValidateIf((o) => o.fileId !== "" && o.fileId !== undefined)
+  @ValidateIf(
+    (o) =>
+      o.fileId !== "" &&
+      o.fileId !== undefined &&
+      o.category === ReminderCategory.PAYMENT
+  )
   @IsMongoId({
     message: "File identifier must be a valid",
   })
