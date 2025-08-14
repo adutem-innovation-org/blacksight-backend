@@ -99,6 +99,7 @@ export class TicketService {
       status: {
         $in: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS],
       },
+      customerEmail,
     });
 
     const ticket = await this.ticketModel.findOneAndUpdate(
@@ -152,6 +153,38 @@ export class TicketService {
           });
         } catch (error) {}
       }
+    } else {
+      try {
+        await this.emailService.send({
+          message: {
+            text: `Hi ${ticket.customerName.split(" ")[0] || "there"}!👋,
+          \n\nYour ticket has been updated.
+          \n\nWe have added your new information to your existing open ticket.
+          \n\nWe will write back to you shorty.
+          \n\nThis email will contain more details in the future.
+          \n\nYour ticket ID is: ${ticket._id}`,
+            to: ticket.customerEmail,
+            subject: `Ticket Creation Confirmation. #${ticket._id}`,
+          },
+          template: "ticket-update",
+          locals: {
+            customerName: ticket.customerName.split(" ")[0] || "there",
+            customerEmail: ticket.customerEmail,
+            ticketId: ticket._id,
+            subject: `Ticket Update Confirmation. #${ticket._id}`,
+            status: ticket.status,
+            message,
+            timestamp: new Date().toLocaleString("en-US", {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+              hour: "numeric",
+              minute: "numeric",
+              hour12: true,
+            }),
+          },
+        });
+      } catch (error) {}
     }
 
     return ticket;
