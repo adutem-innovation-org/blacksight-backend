@@ -236,6 +236,7 @@ export class AgentService {
             appointmentTimeInCustomerTimezone,
             duration: result.duration ?? 30,
             timezone: result.timezone,
+            appointmentId,
             business: {
               contactEmail: businessInfo?.contactEmail ?? owner.email,
               contactTel: businessInfo?.contactTel ?? owner.phone,
