@@ -238,7 +238,7 @@ export class AgentService {
             timezone: result.timezone,
             business: {
               contactEmail: businessInfo?.contactEmail ?? owner.email,
-              contactPhone: businessInfo?.contactTel ?? owner.phone,
+              contactTel: businessInfo?.contactTel ?? owner.phone,
             },
           },
         });
