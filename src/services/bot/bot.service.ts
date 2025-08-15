@@ -597,6 +597,7 @@ export class BotService {
       summaries,
       customInstruction,
       extractedKB,
+      extractedProducts,
       unsummarizedMessages,
     } = await this.mcpService.buildMCPContext({
       appointmentId,
@@ -615,6 +616,8 @@ export class BotService {
         true
       );
 
+    console.log(`Detected intent: ${intentResult.intent}`);
+
     const { promptTokens, responseTokens, cachedTokens } = intentResult.usage;
 
     BotService.eventEmitter.emit(Events.CHARGE_CHAT_COMPLETION, {
@@ -626,6 +629,22 @@ export class BotService {
       userId: authData.userId,
       sessionId: conversationId,
     });
+
+    // Handle PRODUCT_RECOMMENDATION intent specifically
+    if (intentResult.intent === "PRODUCT_RECOMMENDATION") {
+      console.log("Processing product recommendation...");
+      intentResult = await this.handleProductRecommendation(
+        intentResult,
+        extractedProducts,
+        bot,
+        messages,
+        summaries,
+        extractedKB,
+        customInstruction,
+        unsummarizedMessages,
+        userQuery
+      );
+    }
 
     // If both intent and message are missing, retry once
     if (
@@ -704,6 +723,90 @@ export class BotService {
         action: intentResult.intent,
       },
     };
+  }
+
+  private async handleProductRecommendation(
+    intentResult: any,
+    extractedProducts: string,
+    bot: IBot,
+    messages: any[],
+    summaries: string[],
+    extractedKB: string,
+    customInstruction: string,
+    unsummarizedMessages: any[],
+    userQuery: string
+  ) {
+    console.log(
+      `Product extraction result: ${extractedProducts.substring(0, 50)}...`
+    );
+
+    // Tier 1: Check if bot has product sources configured
+    if (!bot.productsSourceIds || bot.productsSourceIds.length === 0) {
+      console.log("No product sources configured for bot");
+      return {
+        ...intentResult,
+        message:
+          "I don't have access to our product catalog at the moment. Is there something else I can help you with?",
+      };
+    }
+
+    // Tier 2: Check if we found relevant products
+    if (
+      extractedProducts === "NO_RELEVANT_PRODUCTS_FOUND" ||
+      extractedProducts === "PRODUCT_QUERY_ERROR" ||
+      extractedProducts === "NO_PRODUCT_SOURCES_CONFIGURED" ||
+      extractedProducts.trim().length === 0
+    ) {
+      console.log("No relevant products found or query error");
+      return {
+        ...intentResult,
+        message:
+          "I couldn't find specific products for your needs at the moment. Is there something else I can help you with?",
+      };
+    }
+
+    // Tier 3: Generate contextual product recommendation using the product data
+    console.log("Generating product recommendations from retrieved data");
+
+    try {
+      const productRecommendationPrompt =
+        this.mcpService.createProductRecommendationPrompt(
+          summaries,
+          extractedKB,
+          extractedProducts, // Use the retrieved product data
+          customInstruction,
+          userQuery
+        );
+
+      const productMessages = this.mcpService.buildMessages({
+        prompt: productRecommendationPrompt,
+        userQuery,
+        unsummarizedMessages,
+      });
+
+      // Generate product recommendation response
+      const productResponse =
+        await this.conversationService.generateContextualResponse({
+          intentResult,
+          messages: productMessages,
+        });
+
+      console.log("Successfully generated product recommendation");
+
+      return {
+        ...intentResult,
+        message: productResponse.content,
+      };
+    } catch (error) {
+      console.error("Error generating product recommendation:", error);
+
+      // Fallback to safe message if recommendation generation fails
+      return {
+        ...intentResult,
+        message:
+          "I'm having trouble accessing our product information right now. Is there something else I can help you with?",
+      };
+    }
   }
 
   /*************  ✨ Windsurf Command ⭐  *************/
@@ -817,7 +920,9 @@ export class BotService {
     // Get bot configuration
     let bot: IBot | null = await this.cacheService.get(botId);
     if (!bot) {
-      bot = await this.botModel.findOne({ _id: new Types.ObjectId(botId) });
+      bot = await this.botModel
+        .findOne({ _id: new Types.ObjectId(botId) })
+        .populate(["knowledgeBases", "productsSources"]);
       if (!bot) {
         return throwUnprocessableEntityError("Unconfigured bot referenced");
       }
