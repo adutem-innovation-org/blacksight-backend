@@ -65,7 +65,7 @@ KnowledgeBaseSchema.virtual("connectedBots", {
   localField: "_id",
   foreignField: "knowledgeBaseIds",
   options: {
-    select: "name _id status -knowledgeBaseIds -knowledgeBases",
+    select: "name _id status",
     lean: true,
   },
 });
