@@ -80,15 +80,15 @@ ProductSourceSchema.virtual("createdBy", {
 
 ProductSourceSchema.plugin(mongooseLeanVirtuals);
 
-function autoPopulate(this: any, next: Function) {
-  this.populate("connectedBots");
-  this.populate("createdBy");
-  next();
-}
+// function autoPopulate(this: any, next: Function) {
+//   this.populate("connectedBots");
+//   this.populate("createdBy");
+//   next();
+// }
 
-ProductSourceSchema.pre("find", autoPopulate);
-ProductSourceSchema.pre("findOne", autoPopulate);
-ProductSourceSchema.pre("findOneAndUpdate", autoPopulate);
+// ProductSourceSchema.pre("find", autoPopulate);
+// ProductSourceSchema.pre("findOne", autoPopulate);
+// ProductSourceSchema.pre("findOneAndUpdate", autoPopulate);
 
 ProductSourceSchema.post("find", function (docs) {
   docs.forEach((doc: any) => {

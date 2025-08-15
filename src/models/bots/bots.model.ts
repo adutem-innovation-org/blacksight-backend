@@ -94,26 +94,28 @@ BotSchema.virtual("knowledgeBases", {
   justOne: false,
   options: {
     select: "tag isActive documentId",
+    lean: true,
   },
 });
 
 BotSchema.virtual("productsSources", {
   ref: "product-sources",
-  localField: "productsSourcesIds",
+  localField: "productsSourceIds",
   foreignField: "_id",
   justOne: false,
   options: {
     select: "source tag documentId",
+    lean: true,
   },
 });
 
-function autoPopulateKnowledgeBase(this: any, next: Function) {
-  this.populate("knowledgeBases");
-  next();
-}
+// function autoPopulateKnowledgeBase(this: any, next: Function) {
+//   this.populate("knowledgeBases");
+//   next();
+// }
 
-BotSchema.pre("find", autoPopulateKnowledgeBase);
-BotSchema.pre("findOne", autoPopulateKnowledgeBase);
-BotSchema.pre("findOneAndUpdate", autoPopulateKnowledgeBase);
+// BotSchema.pre("find", autoPopulateKnowledgeBase);
+// BotSchema.pre("findOne", autoPopulateKnowledgeBase);
+// BotSchema.pre("findOneAndUpdate", autoPopulateKnowledgeBase);
 
 export const Bot: Model<IBot> = model<IBot>(collectionName, BotSchema);

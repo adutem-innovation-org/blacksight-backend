@@ -52,14 +52,14 @@ PaymentFileSchema.virtual("uploadedBy", {
 
 PaymentFileSchema.plugin(mongooseLeanVirtuals);
 
-function autoPopulate(this: any, next: Function) {
-  this.populate("uploadedBy");
-  next();
-}
+// function autoPopulate(this: any, next: Function) {
+//   this.populate("uploadedBy");
+//   next();
+// }
 
-PaymentFileSchema.pre("find", autoPopulate);
-PaymentFileSchema.pre("findOne", autoPopulate);
-PaymentFileSchema.pre("findOneAndUpdate", autoPopulate);
+// PaymentFileSchema.pre("find", autoPopulate);
+// PaymentFileSchema.pre("findOne", autoPopulate);
+// PaymentFileSchema.pre("findOneAndUpdate", autoPopulate);
 
 export const PaymentFile: Model<IPaymentFile> = model<IPaymentFile>(
   "payment-files",
