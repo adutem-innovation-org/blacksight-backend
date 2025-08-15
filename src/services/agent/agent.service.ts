@@ -158,10 +158,12 @@ export class AgentService {
   private async _getAgentConfig(agentId: string, authData: AuthData) {
     let agent: IBot | null = await this.cacheService.get(agentId);
     if (!agent) {
-      agent = await this.agentModel.findOne({
-        _id: new Types.ObjectId(agentId),
-        businessId: new Types.ObjectId(authData.userId),
-      });
+      agent = await this.agentModel
+        .findOne({
+          _id: new Types.ObjectId(agentId),
+          businessId: new Types.ObjectId(authData.userId),
+        })
+        .populate(["knowledgeBases", "productsSources"]);
     }
     return agent;
   }

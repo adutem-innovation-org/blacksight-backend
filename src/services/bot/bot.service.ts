@@ -137,7 +137,10 @@ export class BotService {
     if (isUser(auth)) {
       query.businessId = new Types.ObjectId(auth.userId);
     }
-    return await this.botPaginationService.paginate({ query }, []);
+    return await this.botPaginationService.paginate(
+      { query, populate: ["productsSources", "knowledgeBases"] },
+      []
+    );
   }
 
   async getBotById(auth: AuthData, id: string) {

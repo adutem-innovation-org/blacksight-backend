@@ -407,7 +407,12 @@ export class ProductRecommendationService {
       query.businessId = new Types.ObjectId(auth.userId);
     }
     return await this.productSourcePagination.paginate(
-      { query, projections: { chunks: 0 }, sort: { updatedAt: -1 } },
+      {
+        query,
+        projections: { chunks: 0 },
+        sort: { updatedAt: -1 },
+        populate: ["createdBy", "connectedBots"],
+      },
       []
     );
   }
